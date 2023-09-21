@@ -8,7 +8,7 @@
 #endif
 
 // input file for matrix
-#define IN_FILE_MATRIX "../../../inputMatrix.txt"
+#define IN_FILE_MATRIX "../inputMatrix.txt"
 // input file for vector
 #define IN_FILE_VECTOR "../../../inputVector.txt"
 // output file for matrix

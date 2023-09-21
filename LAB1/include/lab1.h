@@ -3,20 +3,24 @@
 
 #include <vector>
 #include <algorithm>
+#include "shared.h"
 
 using std::vector;
 using std::string;
 
-class matrix {
+class Matrix {
 private:
     unsigned int horizontalLength{};
     unsigned int verticalLength{};
     vector<double> data{};
 public:
-    matrix(unsigned int verticalLength,
+    Matrix() = default;
+
+    Matrix(unsigned int verticalLength,
            unsigned int horizontalLength);
 
-    void inputMatrixFromFile(const string &fileName);
+    void inputMatrixFromFile(const string &fileName = IN_FILE_MATRIX);
+    void outputMatrixToFile(const string &fileName = OUT_FILE_MATRIX);
 
 
     double at(const unsigned int i, const unsigned int j) {
