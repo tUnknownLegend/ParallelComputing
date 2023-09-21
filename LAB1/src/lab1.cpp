@@ -53,8 +53,9 @@ void Matrix::outputMatrixToFile(const string &fileName) {
 
 void Matrix::LU() {
     for (unsigned int i = 0; i < std::min(verticalLength - 1, horizontalLength); ++i) {
+        const double divisionCenterElement = 1. / at(i, i);
         for (unsigned int j = i + 1; j < verticalLength; ++j) {
-            set(j, i, at(j, i) / at(i, i));
+            set(j, i, at(j, i) * divisionCenterElement);
         }
 
         if (i < horizontalLength) {
