@@ -1,45 +1,47 @@
 #include <iostream>
-#include <vector>
-#include <algorithm>
+#include <fstream>
+#include "shared.h"
+#include "lab1.h"
 
-using std::vector;
+matrix::matrix(const unsigned int verticalLength,
+               const unsigned int horizontalLength) {
+    this->verticalLength = verticalLength;
+    this->horizontalLength = horizontalLength;
+    data.reserve(verticalLength * horizontalLength);
+}
 
-
-class matrix {
-private:
-    unsigned int horizontalLength{};
-    unsigned int verticalLength{};
-    vector<double> data{};
-public:
-    matrix(const unsigned int verticalLength,
-           const unsigned int horizontalLength) {
-        this->verticalLength = verticalLength;
-        this->horizontalLength = horizontalLength;
-        data.reserve(verticalLength * horizontalLength);
+void matrix::inputMatrixFromFile(const string &fileName = IN_FILE_MATRIX) {
+    std::ifstream inFile(fileName);
+    if (!inFile.is_open()) {
+        std::cerr << "error // input.txt open\n";
+        return;
     }
 
-    double at(const unsigned int i, const unsigned int j) {
-        return data[i * horizontalLength + j];
+    inFile >> verticalLength;
+    horizontalLength = verticalLength;
+    {
+        double node = 0.0;
+        for (int i = 0; i < verticalLength; ++i) {
+            for (int j = 0; j < horizontalLength; ++j) {
+                inFile >> node;
+                data.push_back(node);
+            }
+        }
     }
-
-    double set(const unsigned int i, const unsigned int j, const double val) {
-        return data[i * horizontalLength + j] = val;
-    }
-
-    void LU();
-};
+    inFile.close();
+}
 
 void matrix::LU() {
     for (unsigned int i = 0; i < std::min(verticalLength - 1, horizontalLength); ++i) {
         for (unsigned int j = i + 1; j < verticalLength; ++j) {
-            this->set(j, i, this->at(j, i) / this->at(i, i));
+            set(j, i, at(j, i) / at(i, i));
         }
 
         if (i < horizontalLength) {
             for (unsigned int j = i + 1; j < verticalLength; ++j) {
                 for (unsigned int k = i + 1; j < horizontalLength; ++k) {
-                    this->set(j, k,
-                              this->at(j, k) - this->at(j, i) * this->at(i, k)
+                    set(j, k,
+                        at(j, k) - at(j, i) * at(i, k)
                     );
                 }
             }
