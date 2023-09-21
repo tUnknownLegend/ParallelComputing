@@ -8,13 +8,13 @@
 #endif
 
 // input file for matrix
-#define IN_FILE_MATRIX "../inputMatrix.txt"
+#define IN_FILE_MATRIX ADD_DOTS"inputMatrix.txt"
 // input file for vector
-#define IN_FILE_VECTOR "../../../inputVector.txt"
+#define IN_FILE_VECTOR ADD_DOTS"inputVector.txt"
 // output file for matrix
-#define OUT_FILE_MATRIX "../outputMatrix.txt"
+#define OUT_FILE_MATRIX ADD_DOTS"outputMatrix.txt"
 // output file for vector
-#define OUT_FILE_VECTOR "../../../outputVector.txt"
+#define OUT_FILE_VECTOR ADD_DOTS"outputVector.txt"
 // compare for double
 #define COMPARE_RATE 10e-6
 // zero division error
