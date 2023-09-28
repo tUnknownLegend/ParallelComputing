@@ -14,7 +14,9 @@ int main() {
 
     matrixBlock->LUblock();
 
-    std::cout << "is equal: " << matrixBlock->isEqual(matrix) << "\n";
+    matrixBlock->outputMatrixToConsole();
+
+    std::cout << "\nis equal: " << matrixBlock->isEqual(matrix) << "\n";
 
     return 0;
 }

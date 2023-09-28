@@ -20,9 +20,14 @@ public:
     Matrix(unsigned int verticalLength,
            unsigned int horizontalLength);
 
+    Matrix(unsigned int verticalLength,
+           unsigned int horizontalLength, double defaultValue);
+
     void inputMatrixFromFile(const string &fileName = IN_FILE_MATRIX);
+
     void outputMatrixToFile(const string &fileName = OUT_FILE_MATRIX);
 
+    void outputMatrixToConsole();
 
     double at(const unsigned int i, const unsigned int j) {
         return data[i * horizontalLength + j];
@@ -33,12 +38,16 @@ public:
     }
 
     void LU(unsigned int verticalL, unsigned int horizontalL);
+
     void LU();
 
     void LUblock();
+
     void reverse(vector<double> matrix, vector<double> U, unsigned int i) const;
+
     vector<double> getAllData();
-    bool isEqual(Matrix* matrix);
+
+    bool isEqual(Matrix *matrix);
 };
 
 #endif //LAB1_LAB1_H
