@@ -85,15 +85,15 @@ void Matrix::LU(const unsigned int verticalL, const unsigned int horizontalL) {
             set(j, i, at(j, i) * divisionCenterElement);
         }
 
-        if (i < horizontalL) {
-            for (unsigned int j = i + 1; j < verticalL; ++j) {
-                for (unsigned int k = i + 1; k < std::min(horizontalLength, horizontalL); ++k) {
-                    set(j, k,
-                        at(j, k) - at(j, i) * at(i, k)
-                    );
-                }
+//        if (i < horizontalL) {
+        for (unsigned int j = i + 1; j < verticalL; ++j) {
+            for (unsigned int k = i + 1; k < std::min(horizontalLength, horizontalL); ++k) {
+                set(j, k,
+                    at(j, k) - at(j, i) * at(i, k)
+                );
             }
         }
+//        }
     }
 }
 
@@ -104,7 +104,17 @@ void Matrix::LU() {
 void Matrix::LUblock() {
     assert(verticalLength == horizontalLength);
     for (unsigned int i = 0; i < verticalLength - 1; i += bucketSize) {
-        LU(verticalLength - 1, bucketSize);
+        Matrix tempMatrix(horizontalLength, bucketSize, 0.);
+
+        for (size_t k = i; k < horizontalLength; ++k)
+            for (size_t l = i; l < i + bucketSize; ++l)
+                tempMatrix.set(k - i, l - i, at(k, l));
+        tempMatrix.LU();
+        for (size_t k = i; k < horizontalLength; ++k)
+            for (size_t l = i; l < i + bucketSize; ++l)
+                set(k, l, tempMatrix.at(k - i, l - i));
+
+//        LU(verticalLength - i, bucketSize);
 
         Matrix L22(bucketSize, bucketSize, 0.0);
 
@@ -115,12 +125,14 @@ void Matrix::LUblock() {
             }
         }
 
+
         Matrix L32(verticalLength - bucketSize, bucketSize, 0.0);
         for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
             for (unsigned int l = i; l < i + bucketSize; ++l) {
                 L32.set(k - (i + bucketSize), l - i, at(k, l));
             }
         }
+
 
         Matrix U23(bucketSize, (horizontalLength - bucketSize), 0.0);
         for (unsigned int k = i; k < i + bucketSize; ++k) {
@@ -139,35 +151,10 @@ void Matrix::LUblock() {
             }
         }
 
-//        for (unsigned int k = 0; k < verticalLength - (i + bucketSize); ++k) {
-//            for (unsigned int l = 0; l < bucketSize; ++l) {
-//                double temp = U23.at(0, l * (verticalLength - i - bucketSize) + k);
-//                for (unsigned int m = 0; m < k; ++m) {
-//                    temp -= L22.at(0, l * bucketSize + m) *
-//                            U23.at(0, l * (verticalLength - i - bucketSize) + k);
-//                }
-//                U23.set(0, l * (verticalLength - i - bucketSize) + k,
-//                        temp / L22.at(0, l * bucketSize + l)
-//                );
-//            }
-//        }
-
         for (unsigned int k = i; k < i + bucketSize; ++k) {
             for (unsigned int l = i + bucketSize; l < verticalLength; ++l)
                 set(k, l, U23.at(k - i, l - (i + bucketSize)));
         }
-
-//        for (unsigned int k = 0; k < verticalLength - (bucketSize + i); ++k) {
-//            for (unsigned int m = 0; m < bucketSize; ++m) {
-//                for (unsigned int l = 0; l < horizontalLength - (bucketSize + i); ++l)
-//                    set(k + i + bucketSize, l + i + bucketSize,
-//                        at(k + i + bucketSize, l + i + bucketSize)
-//                        -
-//                        L32.at(0, k * bucketSize + m) *
-//                        U23.at(0, m * (horizontalLength - (i + bucketSize) + l))
-//                    );
-//            }
-//        }
 
         for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
             for (unsigned int m = 0; m < bucketSize; ++m) {
