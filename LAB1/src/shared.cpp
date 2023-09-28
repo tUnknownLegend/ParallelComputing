@@ -514,8 +514,7 @@ vector<vector<TT>> inverseMatrix(vector<vector<TT>> &matrix) {
     vector<TT> res(matrix.size(), 0.0);
     vector<TT> str;
     vector<vector<TT>> resMatrix;
-    vector<vector<TT>> EE;
-    EE = identityMatrix(matrix.size());
+    vector<vector<TT>> EE = identityMatrix(matrix.size());
 
     for (size_t i = 0; i < matrix.size(); ++i) {
         for (size_t j = 0; j < matrix.size(); ++j) {

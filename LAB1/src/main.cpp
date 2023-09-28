@@ -9,5 +9,12 @@ int main() {
 
     matrix->outputMatrixToFile();
 
+    auto matrixBlock = new Matrix();
+    matrixBlock->inputMatrixFromFile();
+
+    matrixBlock->LUblock();
+
+    std::cout << "is equal: " << matrixBlock->isEqual(matrix) << "\n";
+
     return 0;
 }

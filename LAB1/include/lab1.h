@@ -13,7 +13,7 @@ private:
     unsigned int horizontalLength{};
     unsigned int verticalLength{};
     vector<double> data{};
-    short bucketSize{};
+    short bucketSize = 64;
 public:
     Matrix() = default;
 
@@ -32,7 +32,13 @@ public:
         return data[i * horizontalLength + j] = val;
     }
 
+    void LU(unsigned int verticalL, unsigned int horizontalL);
     void LU();
+
+    void LUblock();
+    void reverse(vector<double> matrix, vector<double> U, unsigned int i) const;
+    vector<double> getAllData();
+    bool isEqual(Matrix* matrix);
 };
 
 #endif //LAB1_LAB1_H
