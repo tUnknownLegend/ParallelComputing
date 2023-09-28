@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <cassert>
 #include "lab1.h"
 
 Matrix::Matrix(const unsigned int verticalLength,
@@ -101,14 +102,11 @@ void Matrix::LU() {
 }
 
 void Matrix::LUblock() {
+    assert(verticalLength == horizontalLength);
     for (unsigned int i = 0; i < verticalLength - 1; i += bucketSize) {
         LU(verticalLength - 1, bucketSize);
 
-//        vector<double> L22(
         Matrix L22(bucketSize, bucketSize, 0.0);
-//        vector<double> L22(bucketSize * bucketSize, 0.0);
-//                data.begin() + i * (horizontalLength + 1),
-//                data.begin() + (i + bucketSize - 1) * (horizontalLength + 1));
 
         for (unsigned int k = i; k < i + bucketSize; ++k) {
             L22.set(k - i, k - i, 1.0);
@@ -117,27 +115,13 @@ void Matrix::LUblock() {
             }
         }
 
-//        for (unsigned int k = i; k < i + bucketSize; ++k) {
-//            L22[(k - i) * bucketSize + (k - i)] = 1.0;
-//        }
-
-//        vector<double> L32(
-//                data.begin() + (i + bucketSize) * horizontalLength + i,
-//                data.begin() + (horizontalLength - 1) * (horizontalLength) + (i + bucketSize - 1));
-
-//        vector<double> U23(
-//                data.begin() + (i) * horizontalLength + i + bucketSize,
-//                data.begin() + (i + bucketSize - 1) * (horizontalLength) + horizontalLength - 1);
-
-        Matrix L32((verticalLength - bucketSize), bucketSize, 0.0);
-//        vector<double> L32((verticalLength - bucketSize) * bucketSize, 0.0);
+        Matrix L32(verticalLength - bucketSize, bucketSize, 0.0);
         for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
             for (unsigned int l = i; l < i + bucketSize; ++l) {
                 L32.set(k - (i + bucketSize), l - i, at(k, l));
             }
         }
 
-//        vector<double> U23(bucketSize * (horizontalLength - bucketSize), 0.0);
         Matrix U23(bucketSize, (horizontalLength - bucketSize), 0.0);
         for (unsigned int k = i; k < i + bucketSize; ++k) {
             for (unsigned int l = i + bucketSize; l < verticalLength; ++l) {
@@ -146,29 +130,53 @@ void Matrix::LUblock() {
         }
 
         for (unsigned int k = 1; k < bucketSize; ++k) {
-            for (unsigned int l = 0; l < verticalLength - (i + bucketSize); ++l) {
+            for (unsigned int l = 0; l < horizontalLength - (i + bucketSize); ++l) {
                 for (unsigned int m = 0; m < k; ++m) {
                     U23.set(k, l,
-                            U23.at(k, l) -
-                            L22.at(k, m) *
-                            U23.at(m, l)
+                            U23.at(k, l) - L22.at(k, m) * U23.at(m, l)
                     );
                 }
             }
         }
+
+//        for (unsigned int k = 0; k < verticalLength - (i + bucketSize); ++k) {
+//            for (unsigned int l = 0; l < bucketSize; ++l) {
+//                double temp = U23.at(0, l * (verticalLength - i - bucketSize) + k);
+//                for (unsigned int m = 0; m < k; ++m) {
+//                    temp -= L22.at(0, l * bucketSize + m) *
+//                            U23.at(0, l * (verticalLength - i - bucketSize) + k);
+//                }
+//                U23.set(0, l * (verticalLength - i - bucketSize) + k,
+//                        temp / L22.at(0, l * bucketSize + l)
+//                );
+//            }
+//        }
+
         for (unsigned int k = i; k < i + bucketSize; ++k) {
             for (unsigned int l = i + bucketSize; l < verticalLength; ++l)
-                set(k, l, U23.at((k - i), l - (i + bucketSize)));
+                set(k, l, U23.at(k - i, l - (i + bucketSize)));
         }
+
+//        for (unsigned int k = 0; k < verticalLength - (bucketSize + i); ++k) {
+//            for (unsigned int m = 0; m < bucketSize; ++m) {
+//                for (unsigned int l = 0; l < horizontalLength - (bucketSize + i); ++l)
+//                    set(k + i + bucketSize, l + i + bucketSize,
+//                        at(k + i + bucketSize, l + i + bucketSize)
+//                        -
+//                        L32.at(0, k * bucketSize + m) *
+//                        U23.at(0, m * (horizontalLength - (i + bucketSize) + l))
+//                    );
+//            }
+//        }
 
         for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
             for (unsigned int m = 0; m < bucketSize; ++m) {
                 for (unsigned int l = i + bucketSize; l < horizontalLength; ++l)
                     set(k, l,
                         at(k, l)
-//                        -
-//                        L32.at(k - (i + bucketSize), m) *
-//                        U23.at(m, l - (i + bucketSize))
+                        -
+                        L32.at(k - (i + bucketSize), m) *
+                        U23.at(m, l - (i + bucketSize))
                     );
             }
         }
