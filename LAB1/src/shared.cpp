@@ -2,6 +2,7 @@
 #include <iostream>
 #include <random>
 #include <iomanip>
+#include <omp.h>
 #include "shared.h"
 
 using std::ifstream;
@@ -17,164 +18,6 @@ double GetRandomDouble(double i, double j) {
     std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
     std::uniform_real_distribution<> dis(i, j);
     return dis(gen);
-}
-
-void inputMatrix(vector<vector<TT>> &matrix) {
-    ifstream inFile(IN_FILE_MATRIX);
-    if (!inFile.is_open()) {
-        cerr << "error // input.txt open\n";
-        return;
-    }
-
-    int amtOfVertices = 0;
-    inFile >> amtOfVertices;
-    matrix.reserve(amtOfVertices);
-
-    {
-        vector<TT> str;
-        TT node = 0.0;
-        for (int i = 0; i < amtOfVertices; ++i) {
-
-            for (int j = 0; j < amtOfVertices; ++j) {
-                inFile >> node;
-                str.push_back(node);
-            }
-            matrix.push_back(str);
-            str.clear();
-        }
-    }
-    inFile.close();
-}
-
-void inputVector(vector<TT> &vect, const string& out) {
-    ifstream inFile(out);
-    if (!inFile.is_open()) {
-        cerr << "error // input.txt open\n";
-        return;
-    }
-
-    int amtOfVertices = 0;
-    inFile >> amtOfVertices;
-    vect.reserve(amtOfVertices);
-
-    {
-        vector<TT> str;
-        TT node = 0.0;
-        for (int j = 0; j < amtOfVertices; ++j) {
-            inFile >> node;
-            str.push_back(node);
-        }
-        vect = std::move(str);
-    }
-    inFile.close();
-}
-
-void outputVector(int amtOfElements) {
-    ofstream outFile(OUT_FILE_VECTOR);
-    if (!outFile.is_open()) {
-        cerr << "error // output.txt open\n";
-        return;
-    }
-
-    outFile << amtOfElements << std::endl;
-
-    {
-        const int leftBound = 1;
-        const int rightBound = 10;
-        for (int j = 0; j < amtOfElements; ++j) {
-            outFile << std::setprecision(8) << GetRandomDouble(leftBound, rightBound) << " ";
-        }
-        outFile << std::endl;
-    }
-    outFile.close();
-}
-
-void outputVector(const vector<TT> &vect, const string& out) {
-    ofstream outFile(out);
-    if (!outFile.is_open()) {
-        cerr << "error // output.txt open\n";
-        return;
-    }
-
-    outFile << vect.size() << std::endl;
-
-    {
-        for (auto &el: vect) {
-            outFile << std::setprecision(8) << el << " ";
-        }
-        outFile << std::endl;
-    }
-    outFile.close();
-}
-
-void outputMatrix(const vector<vector<TT>> &matrix, const string& fileName) {
-    ofstream outFile(fileName);
-    if (!outFile.is_open()) {
-        cerr << "error // output.txt open\n";
-        return;
-    }
-
-    outFile << matrix.size() << std::endl;
-
-    {
-        for (auto &raw: matrix) {
-            for (auto &el: raw) {
-                outFile << std::setprecision(8) << el << " ";
-            }
-            outFile << std::endl;
-        }
-    }
-    outFile.close();
-}
-
-void outputMatrix(int amtOfVertices) {
-    ofstream outFile(OUT_FILE_MATRIX);
-    if (!outFile.is_open()) {
-        cerr << "error // output.txt open\n";
-        return;
-    }
-
-    outFile << amtOfVertices << std::endl;
-
-    {
-        const int leftBound = 0;
-        const int rightBound = 10;
-        for (int i = 0; i < amtOfVertices; ++i) {
-
-            for (int j = 0; j < amtOfVertices; ++j) {
-                outFile << std::setprecision(8) << GetRandomDouble(leftBound, rightBound) << " ";
-            }
-            outFile << std::endl;
-        }
-    }
-    outFile.close();
-}
-
-// вывод матрицы на экран
-void outputOnTheScreenMatrix(const vector<vector<TT>> &matrix) {
-    for (const auto& i : matrix) {
-        for (const auto& j : i) {
-            cout << std::setprecision(8) << std::setw(i.size() * 8) << j << ' ';
-        }
-        cout << std::endl;
-    }
-}
-
-// вывод вектора на экран
-void outputOnTheScreenVector(const std::vector<TT> &vector) {
-    for (const auto &i: vector) {
-        cout << std::setprecision(8) << i << ' ';
-    }
-    cout << std::endl;
-}
-
-// вывод вектора на экран
-void outputOnTheScreenPairVector(const std::vector<std::pair<TT, TT>> &pair) {
-    for (const auto &i: pair) {
-        cout << std::setprecision(8) << i.second << '[';
-        cout << std::setprecision(8) << i.first << "], ";
-    }
-    cout << std::endl;
 }
 
 // Кубическая норма вектора
@@ -268,25 +111,6 @@ TT normDiffer(const vector<vector<TT>> &A, const vector<TT> &b, const vector<TT>
         differ.push_back(b[i] - b1[i]);
     }
     return normVector(differ);
-}
-
-vector<vector<TT>> transpoceMatrix(const vector<vector<TT>> &matrix) {
-    vector<vector<TT>> resMatrix(matrix);
-    for (size_t j = 0; j < matrix.size(); ++j) {
-        for (size_t i = 0; i < matrix.size(); ++i) {
-            resMatrix[j][i] = matrix[i][j];
-        }
-    }
-    return resMatrix;
-}
-
-// Единичная матрица
-vector<vector<TT>> identityMatrix(int size, TT digit) {
-    vector<vector<TT>> resMatrix(size, vector<TT>(size, 0.0));
-    for (int i = 0; i < size; ++i) {
-        resMatrix[i][i] = digit;
-    }
-    return resMatrix;
 }
 
 vector<vector<TT>>
@@ -463,76 +287,10 @@ void vectorDigit(const TT &digit, vector<TT> &secondV, const char &operation) {
     }
 }
 
-// Разложение матрицы на LDU
-void LDU(const vector<vector<TT>> &A, vector<vector<TT>> &L, vector<vector<TT>> &D, vector<vector<TT>> &U) {
-    for (size_t i = 0; i < A.size(); i++) {
-        for (size_t j = 0; j < A.size(); j++) {
-            if (i == j) D[i][j] = A[i][j];
-            if (i > j) L[i][j] = A[i][j];
-            if (i < j) U[i][j] = A[i][j];
-        }
-    }
-}
-
-vector<TT> CalcGaussMethod(vector<vector<TT>> matr, vector<TT> vect) {
-    vector<TT> resultVect(vect.size(), 1.0);
-
-    for (size_t k = 0; k < matr[1].size(); ++k) {
-        size_t maxValInd = k;
-        for (size_t i = k; i < matr.size(); ++i)
-        {
-            if (std::abs(matr[i][k]) > std::abs(matr[maxValInd][k]))
-                maxValInd = i;
-        }
-
-        if (maxValInd != k) {
-            std::swap(matr[maxValInd], matr[k]);
-            std::swap(vect[maxValInd], vect[k]);
-        }
-        for (size_t i = k + 1; i < matr.size(); ++i) {
-            TT coeffProp = matr[i][k] / matr[k][k];
-
-            for (size_t j = k; j < matr[1].size(); ++j) {
-                matr[i][j] -= matr[k][j] * coeffProp;
-            }
-
-            vect[i] -= vect[k] * coeffProp;
-        }
-    }
-    for (int i = matr.size() - 1; i >= 0; --i) {
-        TT sum = 0.0;
-        for (size_t j = i + 1; j < matr.size(); ++j) {
-            sum = sum + matr[i][j] * resultVect[j];
-        }
-        resultVect[i] = (resultVect[i] - sum) / matr[i][i];
-    }
-    return resultVect;
-}
-
-// Обратная матрица
-vector<vector<TT>> inverseMatrix(vector<vector<TT>> &matrix) {
-    vector<TT> res(matrix.size(), 0.0);
-    vector<TT> str;
-    vector<vector<TT>> resMatrix;
-    vector<vector<TT>> EE = identityMatrix(matrix.size());
-
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        for (size_t j = 0; j < matrix.size(); ++j) {
-            str.push_back(EE[j][i]);
-        }
-        res = CalcGaussMethod(matrix, str);
-        resMatrix.push_back(res);
-        str.clear();
-    }
-    return transpoceMatrix(resMatrix);
-}
-
 double MeasureFuncExecTime(const std::function<void()> &FuncToMeasure) {
-    unsigned int startingTime = clock();
+    const double startingTime = omp_get_wtime();
     FuncToMeasure();
-    unsigned int stopTime = clock();
-    unsigned int searchTime = stopTime - startingTime;   //  exec time
-    //cout << "\nSearch time: " << ((double) searchTime) / CLOCKS_PER_SEC << "\n";
+    const double stopTime = omp_get_wtime();
 
-    return (((double) searchTime) / CLOCKS_PER_SEC);
+    return ((stopTime - startingTime));
 }

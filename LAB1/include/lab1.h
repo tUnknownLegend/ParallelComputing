@@ -23,6 +23,8 @@ public:
     Matrix(unsigned int verticalLength,
            unsigned int horizontalLength, double defaultValue);
 
+    Matrix(const Matrix &matrix);
+
     void inputMatrixFromFile(const string &fileName = IN_FILE_MATRIX);
 
     void outputMatrixToFile(const string &fileName = OUT_FILE_MATRIX);
@@ -42,8 +44,6 @@ public:
     void LU();
 
     void LUblock();
-
-    void reverse(vector<double> matrix, vector<double> U, unsigned int i) const;
 
     vector<double> getAllData();
 

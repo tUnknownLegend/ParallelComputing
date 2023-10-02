@@ -1,22 +1,26 @@
 ﻿#include <iostream>
 #include "lab1.h"
 
+using std::cout;
+using std::cin;
+using std::endl;
+
 int main() {
-    auto matrix = new Matrix();
-    matrix->inputMatrixFromFile();
-
-    matrix->LU();
-
-    matrix->outputMatrixToFile();
+    const auto matrixDefault = new Matrix();
+    matrixDefault->inputMatrixFromFile();
 
     auto matrixBlock = new Matrix();
     matrixBlock->inputMatrixFromFile();
 
-    matrixBlock->LUblock();
+    cout << "default LU time exec: " <<
+         MeasureFuncExecTime([matrixDefault]() { matrixDefault->LU(); })
+         << "\nblock LU time exec: "
+         << MeasureFuncExecTime([matrixBlock]() { matrixBlock->LUblock(); }) <<
+         endl;
 
-    matrixBlock->outputMatrixToConsole();
+    cout << "is equal: " << matrixBlock->isEqual(matrixDefault);
 
-    std::cout << "\nis equal: " << matrixBlock->isEqual(matrix) << "\n";
-
+    delete matrixDefault;
+    delete matrixBlock;
     return 0;
 }

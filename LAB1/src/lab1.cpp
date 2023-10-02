@@ -23,6 +23,13 @@ Matrix::Matrix(const unsigned int verticalLength,
     data = std::move(temp);
 }
 
+Matrix::Matrix(const Matrix &matrix) {
+    this->bucketSize = matrix.bucketSize;
+    this->horizontalLength = matrix.horizontalLength;
+    this->verticalLength = matrix.verticalLength;
+    this->data = matrix.data;
+};
+
 void Matrix::inputMatrixFromFile(const string &fileName) {
     std::ifstream inFile(fileName);
     if (!inFile.is_open()) {
@@ -85,7 +92,6 @@ void Matrix::LU(const unsigned int verticalL, const unsigned int horizontalL) {
             set(j, i, at(j, i) * divisionCenterElement);
         }
 
-//        if (i < horizontalL) {
         for (unsigned int j = i + 1; j < verticalL; ++j) {
             for (unsigned int k = i + 1; k < std::min(horizontalLength, horizontalL); ++k) {
                 set(j, k,
@@ -93,7 +99,6 @@ void Matrix::LU(const unsigned int verticalL, const unsigned int horizontalL) {
                 );
             }
         }
-//        }
     }
 }
 
