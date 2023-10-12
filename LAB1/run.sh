@@ -5,4 +5,3 @@
 #SBATCH --partition release
 ulimit -l unlimited
 mpirun -n 3 /nethome/student/FS20/FS2-x1/Pinevich_Sukhova/test/LAB1/executable
-
