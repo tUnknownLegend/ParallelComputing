@@ -10,18 +10,18 @@ using std::string;
 
 class Matrix {
 private:
-    unsigned int horizontalLength{};
-    unsigned int verticalLength{};
+    int horizontalLength{};
+    int verticalLength{};
     vector<double> data{};
     short bucketSize = 32;
 public:
     Matrix() = default;
 
-    Matrix(unsigned int verticalLength,
-           unsigned int horizontalLength);
+    Matrix(int verticalLength,
+           int horizontalLength);
 
-    Matrix(unsigned int verticalLength,
-           unsigned int horizontalLength, double defaultValue);
+    Matrix(int verticalLength,
+           int horizontalLength, double defaultValue);
 
     Matrix(const Matrix &matrix);
 
@@ -31,19 +31,21 @@ public:
 
     void outputMatrixToConsole();
 
-    double at(const unsigned int i, const unsigned int j) {
+    void fillMatrixWithRandomValues();
+
+    double at(const int i, const int j) {
         return data[i * horizontalLength + j];
     }
 
-    double set(const unsigned int i, const unsigned int j, const double val) {
+    double set(const int i, const int j, const double val) {
         return data[i * horizontalLength + j] = val;
     }
 
-    void LU(unsigned int verticalL, unsigned int horizontalL);
+    void LU(int verticalL, int horizontalL);
 
     void LU();
 
-    void LUparallel(unsigned int verticalL, unsigned int horizontalL);
+    void LUparallel(int verticalL, int horizontalL);
 
     void LUparallel();
 

@@ -23,6 +23,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <functional>
 
 #define TT double
 
