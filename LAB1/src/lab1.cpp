@@ -86,76 +86,70 @@ void Matrix::outputMatrixToConsole() {
     }
 }
 
-void Matrix::LU(const int verticalL, const int horizontalL) {
-    for (int i = 0; i < std::min(verticalL - 1, horizontalL); ++i) {
-        const double divisionCenterElement = 1. / at(i, i);
-        for (int j = i + 1; j < verticalL; ++j) {
-            set(j, i, at(j, i) * divisionCenterElement);
-        }
-
-        for (int j = i + 1; j < verticalL; ++j) {
-            for (int k = i + 1; k < std::min(horizontalLength, horizontalL); ++k) {
-                set(j, k,
-                    at(j, k) - at(j, i) * at(i, k)
-                );
-            }
-        }
-    }
-}
-
 void Matrix::fillMatrixWithRandomValues() {
     for (int i = 0; i < horizontalLength * verticalLength; ++i) {
         data[i] = GetRandomDouble(-100, 100);
     }
 }
 
-void Matrix::LUparallel(const int verticalL, const int horizontalL) {
-//#pragma omp parallel for default(none) shared(verticalL, horizontalL)
-    for (int i = 0; i < std::min(verticalL - 1, horizontalL); ++i) {
+void Matrix::lu(const int verticalL, const int horizontalL, const int shift) {
+    for (int i = shift; i < std::min(verticalL - 1, horizontalL + shift); ++i) {
         const double divisionCenterElement = 1. / at(i, i);
-#pragma omp parallel for default(none) shared(i, verticalL, divisionCenterElement)
         for (int j = i + 1; j < verticalL; ++j) {
-            set(j, i, at(j, i) * divisionCenterElement);
+            set(j, i,
+                at(j, i) * divisionCenterElement);
         }
 
-#pragma omp parallel for default(none) shared(i, verticalL, horizontalL)
         for (int j = i + 1; j < verticalL; ++j) {
-            for (int k = i + 1; k < std::min(horizontalLength, horizontalL); ++k) {
+            for (int k = i + 1; k < std::min(horizontalLength, horizontalL + shift); ++k) {
                 set(j, k,
-                    at(j, k) - at(j, i) * at(i, k)
+                    at(j, k) -
+                    at(j, i) * at(i, k)
                 );
             }
         }
     }
 }
 
-void Matrix::LUparallel() {
-    LU(this->verticalLength, this->horizontalLength);
+void Matrix::lu() {
+    lu(this->verticalLength, this->horizontalLength);
 }
 
-void Matrix::LU() {
-    LU(this->verticalLength, this->horizontalLength);
+void Matrix::luParallel(const int verticalL, const int horizontalL, const int shift) {
+//#pragma omp parallel for default(none) shared(verticalL, horizontalL)
+    for (int i = shift; i < std::min(verticalL - 1, horizontalL + shift); ++i) {
+        const double divisionCenterElement = 1. / at(i, i);
+#pragma omp parallel for default(none) shared(i, verticalL, divisionCenterElement)
+        for (int j = i + 1; j < verticalL; ++j) {
+            set(j, i,
+                at(j, i) * divisionCenterElement);
+        }
+
+#pragma omp parallel for default(none) shared(i, verticalL, horizontalL, shift)
+        for (int j = i + 1; j < verticalL; ++j) {
+            for (int k = i + 1; k < std::min(horizontalLength, horizontalL + shift); ++k) {
+                set(j, k,
+                    at(j, k) -
+                    at(j, i) * at(i, k)
+                );
+            }
+        }
+    }
 }
 
-void Matrix::LUblock() {
+void Matrix::luParallel() {
+    luParallel(this->verticalLength, this->horizontalLength);
+}
+
+void Matrix::luBlock() {
     assert(verticalLength == horizontalLength);
 
-    Matrix tempMatrix(horizontalLength, bucketSize, 0.);
     Matrix L22(bucketSize, bucketSize, 0.0);
     Matrix L32(verticalLength - bucketSize, bucketSize, 0.0);
     Matrix U23(bucketSize, (horizontalLength - bucketSize), 0.0);
 
     for (int i = 0; i < verticalLength - 1; i += bucketSize) {
-
-        for (size_t k = i; k < horizontalLength; ++k)
-            for (size_t l = i; l < i + bucketSize; ++l)
-                tempMatrix.set(k - i, l - i, at(k, l));
-        tempMatrix.LUparallel();
-        for (size_t k = i; k < horizontalLength; ++k)
-            for (size_t l = i; l < i + bucketSize; ++l)
-                set(k, l, tempMatrix.at(k - i, l - i));
-
-//        LU(verticalLength - i, bucketSize);
+        lu(horizontalLength, bucketSize, i);
 
         for (int k = i; k < i + bucketSize; ++k) {
             L22.set(k - i, k - i, 1.0);
@@ -191,7 +185,6 @@ void Matrix::LUblock() {
                 set(k, l, U23.at(k - i, l - (i + bucketSize)));
         }
 
-//#pragma omp parallel for default(none) shared(i, L32, U23)
         for (int k = i + bucketSize; k < verticalLength; ++k) {
             for (int m = 0; m < bucketSize; ++m) {
                 for (int l = i + bucketSize; l < horizontalLength; ++l)
@@ -206,25 +199,15 @@ void Matrix::LUblock() {
     }
 }
 
-void Matrix::LUblockParallel() {
+void Matrix::luBlockParallel() {
     assert(verticalLength == horizontalLength);
 
-    Matrix tempMatrix(horizontalLength, bucketSize, 0.);
     Matrix L22(bucketSize, bucketSize, 0.0);
     Matrix L32(verticalLength - bucketSize, bucketSize, 0.0);
     Matrix U23(bucketSize, (horizontalLength - bucketSize), 0.0);
 
     for (int i = 0; i < verticalLength - 1; i += bucketSize) {
-
-        for (size_t k = i; k < horizontalLength; ++k)
-            for (size_t l = i; l < i + bucketSize; ++l)
-                tempMatrix.set(k - i, l - i, at(k, l));
-        tempMatrix.LUparallel();
-        for (size_t k = i; k < horizontalLength; ++k)
-            for (size_t l = i; l < i + bucketSize; ++l)
-                set(k, l, tempMatrix.at(k - i, l - i));
-
-//        LU(verticalLength - i, bucketSize);
+        luParallel(horizontalLength, bucketSize, i);
 
         for (int k = i; k < i + bucketSize; ++k) {
             L22.set(k - i, k - i, 1.0);

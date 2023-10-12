@@ -41,17 +41,17 @@ public:
         return data[i * horizontalLength + j] = val;
     }
 
-    void LU(int verticalL, int horizontalL);
+    void lu(int verticalL, int horizontalL, int shift = 0);
 
-    void LU();
+    void lu();
 
-    void LUparallel(int verticalL, int horizontalL);
+    void luParallel(int verticalL, int horizontalL, int shift = 0);
 
-    void LUparallel();
+    void luParallel();
 
-    void LUblock();
+    void luBlock();
 
-    void LUblockParallel();
+    void luBlockParallel();
 
     vector<double> getAllData();
 

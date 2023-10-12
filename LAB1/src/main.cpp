@@ -6,27 +6,23 @@ using std::cin;
 using std::endl;
 
 int main() {
-    const auto matrixDefault = new Matrix(1024, 1024, 0.0);
-//    matrixDefault->inputMatrixFromFile();
+    const auto matrixDefault = new Matrix(8192, 8192, 0.0);
     matrixDefault->fillMatrixWithRandomValues();
 
     auto matrixBlock = new Matrix(*matrixDefault);
-//    matrixBlock->inputMatrixFromFile();
 
     auto matrixParallel = new Matrix(*matrixDefault);
-//    matrixParallel->inputMatrixFromFile();
 
     auto matrixBlockParallel = new Matrix(*matrixDefault);
-//    matrixBlockParallel->inputMatrixFromFile();
 
     cout << "default LU time exec: " <<
-         MeasureFuncExecTime([matrixDefault]() { matrixDefault->LU(); })
+         MeasureFuncExecTime([matrixDefault]() { matrixDefault->lu(); })
          << "\nblock LU time exec: "
-         << MeasureFuncExecTime([matrixBlock]() { matrixBlock->LUblock(); }) <<
+         << MeasureFuncExecTime([matrixBlock]() { matrixBlock->luBlock(); }) <<
          "\nLU parallel time exec: "
-         << MeasureFuncExecTime([matrixParallel]() { matrixParallel->LUparallel(); }) <<
+         << MeasureFuncExecTime([matrixParallel]() { matrixParallel->luParallel(); }) <<
          "\nblock LU parallel time exec: "
-         << MeasureFuncExecTime([matrixBlockParallel]() { matrixBlockParallel->LUblockParallel(); })
+         << MeasureFuncExecTime([matrixBlockParallel]() { matrixBlockParallel->luBlockParallel(); })
          <<
          endl;
 
@@ -35,7 +31,7 @@ int main() {
     cout << "\nmatrixParallel is equal to matrixDefault: " <<
          matrixParallel->isEqual(matrixDefault);
     cout << "\nmatrixBlockParallel is equal to matrixDefault: " <<
-         matrixBlockParallel->isEqual(matrixDefault);
+         matrixBlockParallel->isEqual(matrixDefault) << endl;
 
     delete matrixDefault;
     delete matrixBlock;
