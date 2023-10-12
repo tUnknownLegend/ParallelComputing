@@ -87,6 +87,7 @@ void Matrix::outputMatrixToConsole() {
 }
 
 void Matrix::fillMatrixWithRandomValues() {
+#pragma omp parallel for default(none)
     for (int i = 0; i < horizontalLength * verticalLength; ++i) {
         data[i] = GetRandomDouble(-100, 100);
     }

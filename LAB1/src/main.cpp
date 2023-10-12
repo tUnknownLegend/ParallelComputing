@@ -6,7 +6,7 @@ using std::cin;
 using std::endl;
 
 int main() {
-    const auto matrixDefault = new Matrix(8192, 8192, 0.0);
+    const auto matrixDefault = new Matrix(4096, 4096, 0.0);
     matrixDefault->fillMatrixWithRandomValues();
 
     auto matrixBlock = new Matrix(*matrixDefault);

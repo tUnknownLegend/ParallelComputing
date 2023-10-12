@@ -13,7 +13,7 @@ private:
     int horizontalLength{};
     int verticalLength{};
     vector<double> data{};
-    short bucketSize = 32;
+    short bucketSize = 64;
 public:
     Matrix() = default;
 
