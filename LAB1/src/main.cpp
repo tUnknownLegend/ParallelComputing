@@ -13,12 +13,13 @@ int main() {
     matrixBlock->inputMatrixFromFile();
 
     cout << "default LU time exec: " <<
-         MeasureFuncExecTime([matrixDefault]() { matrixDefault->LU(); })
+         MeasureFuncExecTime([matrixDefault]() { matrixDefault->LUparallel(); })
          << "\nblock LU time exec: "
          << MeasureFuncExecTime([matrixBlock]() { matrixBlock->LUblock(); }) <<
          endl;
 
     cout << "is equal: " << matrixBlock->isEqual(matrixDefault);
+
 
     delete matrixDefault;
     delete matrixBlock;

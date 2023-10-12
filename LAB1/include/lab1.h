@@ -13,7 +13,7 @@ private:
     unsigned int horizontalLength{};
     unsigned int verticalLength{};
     vector<double> data{};
-    short bucketSize = 64;
+    short bucketSize = 32;
 public:
     Matrix() = default;
 
@@ -42,6 +42,10 @@ public:
     void LU(unsigned int verticalL, unsigned int horizontalL);
 
     void LU();
+
+    void LUparallel(unsigned int verticalL, unsigned int horizontalL);
+
+    void LUparallel();
 
     void LUblock();
 
