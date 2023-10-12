@@ -1,0 +1,7 @@
+#!/bin/sh
+#SBATCH --job-name=LAB-1-test
+#SBATCH --time=00:05:00
+#SBATCH --nodes=1 --cpus-per-task=18
+#SBATCH --partition release
+ulimit -l unlimited
+mpirun -n 1 /nethome/student/FS20/FS2-x1/Pinevich_Sukhova/LAB1/executable
