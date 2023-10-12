@@ -185,6 +185,75 @@ void Matrix::LUblock() {
                 set(k, l, U23.at(k - i, l - (i + bucketSize)));
         }
 
+//#pragma omp parallel for default(none) shared(i, L32, U23)
+        for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
+            for (unsigned int m = 0; m < bucketSize; ++m) {
+                for (unsigned int l = i + bucketSize; l < horizontalLength; ++l)
+                    set(k, l,
+                        at(k, l)
+                        -
+                        L32.at(k - (i + bucketSize), m) *
+                        U23.at(m, l - (i + bucketSize))
+                    );
+            }
+        }
+    }
+}
+
+void Matrix::LUblockParallel() {
+    assert(verticalLength == horizontalLength);
+
+    Matrix tempMatrix(horizontalLength, bucketSize, 0.);
+    Matrix L22(bucketSize, bucketSize, 0.0);
+    Matrix L32(verticalLength - bucketSize, bucketSize, 0.0);
+    Matrix U23(bucketSize, (horizontalLength - bucketSize), 0.0);
+
+    for (unsigned int i = 0; i < verticalLength - 1; i += bucketSize) {
+
+        for (size_t k = i; k < horizontalLength; ++k)
+            for (size_t l = i; l < i + bucketSize; ++l)
+                tempMatrix.set(k - i, l - i, at(k, l));
+        tempMatrix.LUparallel();
+        for (size_t k = i; k < horizontalLength; ++k)
+            for (size_t l = i; l < i + bucketSize; ++l)
+                set(k, l, tempMatrix.at(k - i, l - i));
+
+//        LU(verticalLength - i, bucketSize);
+
+        for (unsigned int k = i; k < i + bucketSize; ++k) {
+            L22.set(k - i, k - i, 1.0);
+            for (unsigned int l = i; l < k; ++l) {
+                L22.set(k - i, l - i, at(k, l));
+            }
+        }
+
+        for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
+            for (unsigned int l = i; l < i + bucketSize; ++l) {
+                L32.set(k - (i + bucketSize), l - i, at(k, l));
+            }
+        }
+
+        for (unsigned int k = i; k < i + bucketSize; ++k) {
+            for (unsigned int l = i + bucketSize; l < verticalLength; ++l) {
+                U23.set(k - i, l - (i + bucketSize), at(k, l));
+            }
+        }
+
+        for (unsigned int k = 1; k < bucketSize; ++k) {
+            for (unsigned int l = 0; l < horizontalLength - (i + bucketSize); ++l) {
+                for (unsigned int m = 0; m < k; ++m) {
+                    U23.set(k, l,
+                            U23.at(k, l) - L22.at(k, m) * U23.at(m, l)
+                    );
+                }
+            }
+        }
+
+        for (unsigned int k = i; k < i + bucketSize; ++k) {
+            for (unsigned int l = i + bucketSize; l < verticalLength; ++l)
+                set(k, l, U23.at(k - i, l - (i + bucketSize)));
+        }
+
 #pragma omp parallel for default(none) shared(i, L32, U23)
         for (unsigned int k = i + bucketSize; k < verticalLength; ++k) {
             for (unsigned int m = 0; m < bucketSize; ++m) {

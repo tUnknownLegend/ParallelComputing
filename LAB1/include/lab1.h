@@ -49,6 +49,8 @@ public:
 
     void LUblock();
 
+    void LUblockParallel();
+
     vector<double> getAllData();
 
     bool isEqual(Matrix *matrix);
