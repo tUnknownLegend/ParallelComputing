@@ -6,7 +6,7 @@ using std::cin;
 using std::endl;
 
 int main() {
-    const auto matrixDefault = new Matrix(4096, 4096, 0.0);
+    const auto matrixDefault = new Matrix(8192, 8192, 0.0);
     matrixDefault->fillMatrixWithRandomValues();
 
     auto matrixBlock = new Matrix(*matrixDefault);
@@ -15,16 +15,27 @@ int main() {
 
     auto matrixBlockParallel = new Matrix(*matrixDefault);
 
+    const auto defaultLuTime = MeasureFuncExecTime([matrixDefault]() { matrixDefault->lu(); });
+    const auto defaultParallelLuTime = MeasureFuncExecTime([matrixBlock]() { matrixBlock->luBlock(); });
+    const auto blockLuTime = MeasureFuncExecTime([matrixParallel]() { matrixParallel->luParallel(); });
+    const auto blockParallelLuTime = MeasureFuncExecTime(
+            [matrixBlockParallel]() { matrixBlockParallel->luBlockParallel(); });
+
     cout << "default LU time exec: " <<
-         MeasureFuncExecTime([matrixDefault]() { matrixDefault->lu(); })
+         defaultLuTime
          << "\nblock LU time exec: "
-         << MeasureFuncExecTime([matrixBlock]() { matrixBlock->luBlock(); }) <<
+         << blockLuTime <<
          "\nLU parallel time exec: "
-         << MeasureFuncExecTime([matrixParallel]() { matrixParallel->luParallel(); }) <<
+         << defaultParallelLuTime <<
          "\nblock LU parallel time exec: "
-         << MeasureFuncExecTime([matrixBlockParallel]() { matrixBlockParallel->luBlockParallel(); })
+         << blockParallelLuTime
          <<
          endl;
+
+    cout << "default LU effectivness: " << defaultLuTime / defaultParallelLuTime <<
+         "\nblock LU effectivness: " << blockLuTime / blockParallelLuTime << endl;
+
+    cout << "speed up: " << defaultParallelLuTime / blockParallelLuTime << endl;
 
     cout << "matrixBlock is equal to matrixDefault: " <<
          matrixBlock->isEqual(matrixDefault);
