@@ -42,6 +42,7 @@ void Matrix::inputMatrixFromFile(const string &fileName) {
     horizontalLength = verticalLength;
     bucketSize = (horizontalLength < bucketSize ? horizontalLength / 2 : bucketSize);
     bucketSize = (2 > bucketSize ? 2 : bucketSize);
+    data.reserve(verticalLength * horizontalLength);
     {
         double node = 0.0;
         for (int i = 0; i < verticalLength; ++i) {
@@ -117,8 +118,7 @@ void Matrix::lu() {
 }
 
 void Matrix::luParallel(const int verticalL, const int horizontalL, const int shift) {
-//#pragma omp parallel for default(none) shared(verticalL, horizontalL)
-    for (int i = shift; i < std::min(verticalL - 1, horizontalL + shift); ++i) {
+        for (int i = shift; i < std::min(verticalL - 1, horizontalL + shift); ++i) {
         const double divisionCenterElement = 1. / at(i, i);
 #pragma omp parallel for default(none) shared(i, verticalL, divisionCenterElement)
         for (int j = i + 1; j < verticalL; ++j) {
