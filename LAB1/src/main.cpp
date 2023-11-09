@@ -1,5 +1,5 @@
 ﻿#include <iostream>
-#include "lab1.h"
+#include "lab2.h"
 
 using std::cout;
 using std::cin;
