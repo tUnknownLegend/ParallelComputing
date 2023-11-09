@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <omp.h>
-#include "lab2.h"
+#include "lab1.h"
 
 Matrix::Matrix(const int verticalLength,
                const int horizontalLength) {
