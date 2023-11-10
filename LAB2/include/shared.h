@@ -38,7 +38,7 @@ TT normInfMatrix(const std::vector<std::vector<TT>> &matrix);
 
 TT norm1Matrix(const std::vector<std::vector<TT>> &matrix);
 
-std::vector<TT> MultiplicationMatrixvsVector(const std::vector<std::vector<TT>> &matrix, const std::vector<TT> &vect);
+std::vector<TT> MultiplicationMatrixVector(const std::vector<std::vector<TT>> &matrix, const std::vector<TT> &vect);
 
 TT normDiffer(const std::vector<std::vector<TT>> &A, const std::vector<TT> &b, const std::vector<TT> &x,
               TT(*normVector)(const std::vector<TT> &));
@@ -64,6 +64,8 @@ std::vector<TT> vectorMatrixMultiplication(const std::vector<std::vector<TT>> &f
 
 std::vector<TT> vectorRDigit(const TT &digit, std::vector<TT> secondV, const char &operation);
 
-double MeasureFuncExecTime(const std::function<void()> &FuncToMeasure);
+TT MeasureFuncExecTime(const std::function<void()> &FuncToMeasure);
+
+bool isOddNumber(int n);
 
 #endif //INC_LAB_SHARED_H

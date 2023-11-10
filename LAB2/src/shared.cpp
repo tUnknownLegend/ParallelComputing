@@ -45,7 +45,7 @@ TT normInfMatrix(const vector<vector<TT>> &matrix) {
 
     for (size_t j = 0; j < matrix.size(); ++j) {
         TT sum = 0;
-        for (const auto & i : matrix) {
+        for (const auto &i: matrix) {
             sum += std::abs(i[j]);
         }
         if (norm < sum)
@@ -87,7 +87,7 @@ TT l2NormVec(const vector<TT> &vec) {
     return sqrt(sum);
 }
 
-vector<TT> MultiplicationMatrixvsVector(const vector<vector<TT>> &matrix, const vector<TT> &vect) {
+vector<TT> MultiplicationMatrixVector(const vector<vector<TT>> &matrix, const vector<TT> &vect) {
     vector<TT> resVector;
     TT s;
     for (size_t i = 0; i < matrix.size(); ++i) {
@@ -105,7 +105,7 @@ vector<TT> MultiplicationMatrixvsVector(const vector<vector<TT>> &matrix, const 
 TT normDiffer(const vector<vector<TT>> &A, const vector<TT> &b, const vector<TT> &x,
               TT(*normVector)(const vector<TT> &)) {
     vector<TT> differ;
-    vector<TT> b1 = MultiplicationMatrixvsVector(A, x);
+    vector<TT> b1 = MultiplicationMatrixVector(A, x);
 
     for (size_t i = 0; i < b.size(); ++i) {
         differ.push_back(b[i] - b1[i]);
@@ -293,4 +293,8 @@ double MeasureFuncExecTime(const std::function<void()> &FuncToMeasure) {
     const double stopTime = omp_get_wtime();
 
     return ((stopTime - startingTime));
+}
+
+bool isOddNumber(const int n) {
+    return n % 2 != 0;
 }

@@ -13,11 +13,11 @@ if (OPENMP_FOUND)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif ()
 
-include_directories(./src ./include)
+include_directories(src include)
 
 file(GLOB SOURCES *.cpp *.h)
 
-set(SOURCES ./src/main.cpp ./src/shared.cpp src/lab2.cpp)
-set(HEADERS ./include/shared.h include/lab2.h)
+set(SOURCES src/main.cpp src/shared.cpp src/matrix.cpp src/helmholtz.cpp)
+set(HEADERS include/shared.h include/matrix.h include/helmholtz.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
