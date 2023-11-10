@@ -15,15 +15,15 @@ private:
     double h;
     std::pair<vector<double>, vector<double>> grid;
 
-    double preciseSolution(const double x, const double y) {
+    inline double preciseSolution(const double x, const double y) {
         return (1 - x) * x * sin(M_PI * y);
     }
 
-    double rightSideFunction(const double x, const double y) const {
+    inline double rightSideFunction(const double x, const double y) const {
         return 2 * sin(M_PI * y) + pow(k, 2) * (1 - x) * x * sin(M_PI * y) + pow(M_PI, 2) * (1 - x) * x * sin(M_PI * y);
     };
 
-    void calcRedAndBlackTreePart(const Matrix &previous, double fMultiplayer, double yMultiplayer,
+    inline void calcRedAndBlackTreePart(const Matrix &previous, double fMultiplayer, double yMultiplayer,
                                  const std::pair<int, int> &firstIterationOptions);
 
 public:
