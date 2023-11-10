@@ -5,16 +5,37 @@
 #include <algorithm>
 #include "shared.h"
 #include "matrix.h"
-
-Matrix helmholtzSolve(
-        double k,
-        double h,
-        const std::pair<vector<double>, vector<double>> &grid,
-        const std::function<double(double, double)> &f
-);
+#include <cmath>
 
 
-double diffHelmholtz(const Matrix &solution, const std::pair<vector<double>, vector<double>> &grid,
-                     const std::function<double(double, double)> &calcPreciseSolution);
+class Helmholtz {
+private:
+    Matrix data;
+    vector<std::pair<double, double>> region;
+    double k;
+    double h;
+    int verticalSize;
+    int horizontalSize;
+    std::pair<vector<double>, vector<double>> grid;
+
+    double preciseSolution(const double x, const double y) {
+        return (1 - x) * x * sin(M_PI * y);
+    }
+
+    double rightSideFunction(const double x, const double y) const {
+        return 2 * sin(M_PI * y) + pow(k, 2) * (1 - x) * x * sin(M_PI * y) + pow(M_PI, 2) * (1 - x) * x * sin(M_PI * y);
+    };
+
+    void calcRedAndBlackTreePart(const Matrix &previous, double fMultiplayer, double yMultiplayer,
+                                 const std::pair<int, int> &firstIterationOptions);
+
+public:
+    Helmholtz(std::vector<std::pair<double, double>> inRegion, double inH, double inK);
+
+    Matrix helmholtzSolve();
+
+    double diffHelmholtz();
+};
+
 
 #endif //LAB2_HELMHOLTZ_H
