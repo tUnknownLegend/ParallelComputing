@@ -14,8 +14,6 @@ private:
     vector<std::pair<double, double>> region;
     double k;
     double h;
-    int verticalSize;
-    int horizontalSize;
     std::pair<vector<double>, vector<double>> grid;
 
     double preciseSolution(const double x, const double y) {

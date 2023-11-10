@@ -8,23 +8,28 @@ using std::vector;
 Helmholtz::Helmholtz(const vector<pair<double, double>> inRegion, const double inH, const double inK) {
     this->region = inRegion;
     this->h = inH;
-    this->verticalSize = ((region[0].second - region[0].first) / h);
-    vector<double> verticalGrid(verticalSize, 0.0);
-    verticalGrid.resize(verticalSize + 1);
+    const int verticalSize = ((region[0].second - region[0].first) / h);
+    vector<double> verticalGrid(verticalSize + 1, 0.0);
     for (int i = 0; i < verticalSize + 1; ++i) {
         verticalGrid[i] = (i * (region[0].second - region[0].first) / verticalSize);
     }
 
     this->k = inK;
-    this->horizontalSize = ((region[1].second - region[1].first) / k);
-    vector<double> horizontalGrid(horizontalSize, 0.0);
-    horizontalGrid.resize(horizontalSize + 1);
+    const int horizontalSize = ((region[1].second - region[1].first) / k);
+    vector<double> horizontalGrid(horizontalSize + 1, 0.0);
     for (int j = 0; j < horizontalSize + 1; ++j) {
         horizontalGrid[j] = (j * (region[1].second - region[1].first) / horizontalSize);
     }
     this->grid = {verticalGrid, horizontalGrid};
     Matrix temp(grid.first.size(), grid.second.size(), 0.0);
     this->data = temp;
+
+//    for (int i = 0; i < this->data.horizontalSize(); ++i) {
+//        this->data.set(i, 0, 0.0);
+//    }
+//    for (int j = 0; j < this->data.verticalSize(); ++j) {
+//        this->data.set(0, j, 0.0);
+//    }
 }
 
 Matrix Helmholtz::helmholtzSolve() {
