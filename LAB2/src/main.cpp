@@ -6,15 +6,15 @@ using std::cin;
 using std::endl;
 
 int main() {
-    const auto solve = new Helmholtz({
+    const auto helmholtz = new Helmholtz({
                                              {0.0, 1.0},
                                              {0.0, 1.0}
                                      }, 0.001, 0.001);
 
-    solve->helmholtzSolve();
+    helmholtz->helmholtzSolve();
 
-    cout << "diff: " << solve->diffHelmholtz() << endl;
+    cout << "diff: " << helmholtz->diffOfSolution() << endl;
 
-    delete solve;
+    delete helmholtz;
     return 0;
 }

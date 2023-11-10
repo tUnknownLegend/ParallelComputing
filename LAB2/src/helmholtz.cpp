@@ -47,7 +47,7 @@ Matrix Helmholtz::helmholtzSolve() {
 }
 
 void Helmholtz::calcRedAndBlackTreePart(const Matrix &previous, const double fMultiplayer, const double yMultiplayer,
-                             const std::pair<int, int> &firstIterationOptions) {
+                                        const std::pair<int, int> &firstIterationOptions) {
     for (int j = 1; j < grid.second.size() - 1; ++j) {
         for (int i = isOddNumber(j) ? firstIterationOptions.first : firstIterationOptions.second;
              i < grid.first.size() - 1; i += 2) {
@@ -60,7 +60,7 @@ void Helmholtz::calcRedAndBlackTreePart(const Matrix &previous, const double fMu
     }
 };
 
-double Helmholtz::diffHelmholtz() {
+double Helmholtz::diffOfSolution() {
     double maxDiff = 0.0;
     for (int i = 0; i < this->data.horizontalSize(); ++i) {
         for (int j = 0; j < this->data.verticalSize(); ++j) {

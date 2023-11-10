@@ -7,7 +7,6 @@
 #include "matrix.h"
 #include <cmath>
 
-
 class Helmholtz {
 private:
     Matrix data;
@@ -32,8 +31,7 @@ public:
 
     Matrix helmholtzSolve();
 
-    double diffHelmholtz();
+    double diffOfSolution();
 };
-
 
 #endif //LAB2_HELMHOLTZ_H
