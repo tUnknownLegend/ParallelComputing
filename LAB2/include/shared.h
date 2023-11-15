@@ -25,7 +25,9 @@
 #include <string>
 #include <functional>
 
+
 #define TT double
+
 
 //  This function generates a random TT in [i, j]
 double GetRandomDouble(double i, double j);
