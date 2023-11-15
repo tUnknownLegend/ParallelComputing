@@ -13,7 +13,7 @@ private:
     vector<std::pair<double, double>> region;
     double k;
     double h;
-    std::pair<vector<double>, vector<double>> grid;
+    std::pair<int, int> size;
 
     inline double preciseSolution(const double x, const double y) {
         return (1.0 - x) * x * sin(M_PI * y);

@@ -7,21 +7,14 @@ using std::vector;
 
 Helmholtz::Helmholtz(const vector<pair<double, double>> &inRegion, const double inH, const double inK) {
     this->region = inRegion;
+
     this->h = inH;
-    const int verticalSize = ((region[0].second - region[0].first) / h);
-    vector<double> verticalGrid(verticalSize + 1, 0.0);
-    for (int i = 0; i < verticalSize + 1; ++i) {
-        verticalGrid[i] = (i * (region[0].second - region[0].first) / verticalSize);
-    }
+    size.first = (region[0].second - region[0].first) / h + 1;
 
     this->k = inK;
-    const int horizontalSize = ((region[1].second - region[1].first) / k);
-    vector<double> horizontalGrid(horizontalSize + 1, 0.0);
-    for (int j = 0; j < horizontalSize + 1; ++j) {
-        horizontalGrid[j] = (j * (region[1].second - region[1].first) / horizontalSize);
-    }
-    this->grid = {verticalGrid, horizontalGrid};
-    Matrix temp(grid.first.size(), grid.second.size(), 0.0);
+    size.second = (region[1].second - region[1].first) / k + 1;
+
+    Matrix temp(size.first, size.second, 0.0);
     this->data = temp;
 
     for (int i = 0; i < this->data.horizontalLength; ++i) {
@@ -39,16 +32,16 @@ Matrix Helmholtz::helmholtzSolve() {
     do {
         Matrix::swap(this->data, previous);
 
-        for (int j = 1; j < grid.second.size() - 1; ++j) {
+        for (int j = 1; j < size.second - 1; ++j) {
             for (int i = isOddNumber(j) ? 1 : 2;
-                 i < grid.first.size() - 1; i += 2) {
+                 i < size.first - 1; i += 2) {
                 forFunc(previous, i, j, yMultiplayer);
             }
         }
 
-        for (int j = 1; j < grid.second.size() - 1; ++j) {
+        for (int j = 1; j < size.second - 1; ++j) {
             for (int i = isOddNumber(j) ? 2 : 1;
-                 i < grid.first.size() - 1; i += 2) {
+                 i < size.first - 1; i += 2) {
                 forFunc(previous, i, j, yMultiplayer);
             }
         }
@@ -66,8 +59,8 @@ Matrix Helmholtz::jacobiSolve() {
     do {
         Matrix::swap(this->data, previous);
 
-        for (int j = 1; j < grid.second.size() - 1; ++j) {
-            for (int i = 1; i < grid.first.size() - 1; ++i) {
+        for (int j = 1; j < size.second - 1; ++j) {
+            for (int i = 1; i < size.first - 1; ++i) {
                 forFunc(previous, i, j, yMultiplayer);
             }
         }
@@ -80,7 +73,7 @@ Matrix Helmholtz::jacobiSolve() {
 
 
 void Helmholtz::forFunc(Matrix &previous, const int i, const int j, const double yMultiplayer) {
-    previous.set(j, i, yMultiplayer * (pow(h, 2) * rightSideFunction(grid.first[i], grid.second[j]) +
+    previous.set(j, i, yMultiplayer * (pow(h, 2) * rightSideFunction(i * h, j * h) +
                                        (previous.get(j + 1, i) +
                                         previous.get(j - 1, i) +
                                         previous.get(j, i + 1) +
@@ -91,7 +84,7 @@ double Helmholtz::diffOfSolution() {
     double sum = 0.0;
     for (int i = 0; i < this->data.horizontalLength; ++i) {
         for (int j = 0; j < this->data.verticalLength; ++j) {
-            sum += std::pow(this->data.get(i, j) - preciseSolution(grid.first[i], grid.second[j]), 2);
+            sum += std::pow(this->data.get(i, j) - preciseSolution(i * h, j * h), 2);
         }
     }
     return sqrt(sum);
