@@ -23,11 +23,11 @@ private:
         return 2 * sin(M_PI * y) + pow(k, 2) * (1 - x) * x * sin(M_PI * y) + pow(M_PI, 2) * (1 - x) * x * sin(M_PI * y);
     };
 
-    inline void calcRedAndBlackTreePart(const Matrix &previous, double fMultiplayer, double yMultiplayer,
+    inline void calcRedAndBlackTreePart(const Matrix &previous, double yMultiplayer,
                                  const std::pair<int, int> &firstIterationOptions);
 
 public:
-    Helmholtz(std::vector<std::pair<double, double>> inRegion, double inH, double inK);
+    Helmholtz(const std::vector<std::pair<double, double>>& inRegion, double inH, double inK);
 
     Matrix helmholtzSolve();
 
