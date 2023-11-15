@@ -21,7 +21,7 @@ Matrix::Matrix(const int verticalLength,
     this->horizontalLength = horizontalLength;
     bucketSize = (horizontalLength < bucketSize ? horizontalLength / 2 : bucketSize);
     bucketSize = (2 > bucketSize ? 2 : bucketSize);
-    vector<double> temp(horizontalLength * verticalLength, 0.0);
+    vector<double> temp(horizontalLength * verticalLength, defaultValue);
     data = std::move(temp);
 }
 
@@ -29,7 +29,7 @@ Matrix::Matrix(const Matrix &matrix) {
     this->bucketSize = matrix.bucketSize;
     this->horizontalLength = matrix.horizontalLength;
     this->verticalLength = matrix.verticalLength;
-    this->data = matrix.data;
+    std::copy(matrix.data.begin(), matrix.data.end(), back_inserter(this->data));
 };
 
 void Matrix::inputMatrixFromFile(const string &fileName) {
@@ -183,30 +183,31 @@ vector<double> Matrix::getAllData() {
     return data;
 }
 
-bool Matrix::isEqual(Matrix *matrix) {
+bool Matrix::isEqual(Matrix *matrix) const {
     return matrix->getAllData() == data;
 }
 
-int Matrix::verticalSize() const {
-    return verticalLength;
-}
 
-int Matrix::horizontalSize() const {
-    return horizontalLength;
-}
+void Matrix::swap(Matrix& firstMatrixToSwap, Matrix& secondMatrixToSwap) {
+    std::swap(firstMatrixToSwap.data, secondMatrixToSwap.data);
+    std::swap(firstMatrixToSwap.verticalLength, secondMatrixToSwap.verticalLength);
+    std::swap(firstMatrixToSwap.horizontalLength, secondMatrixToSwap.horizontalLength);
+};
 
-void Matrix::swap(Matrix &matrixToSwap) {
-    std::swap(this->verticalLength, matrixToSwap.verticalLength);
-    std::swap(this->horizontalLength, matrixToSwap.horizontalLength);
-    std::swap(this->data, matrixToSwap.data);
-}
+void Matrix::swap(Matrix& secondMatrixToSwap) {
+    std::swap(this->data, secondMatrixToSwap.data);
+    std::swap(this->verticalLength, secondMatrixToSwap.verticalLength);
+    std::swap(this->horizontalLength, secondMatrixToSwap.horizontalLength);
+};
+
 
 double Matrix::frobeniusNorm(const Matrix &left, const Matrix &right) {
     double sum = 0.;
-    for (int i = 0; i < left.horizontalSize(); ++i)
-        for (int j = 0; j < left.verticalSize(); ++j) {
+    for (int i = 0; i < left.horizontalLength; ++i) {
+        for (int j = 0; j < left.verticalLength; ++j) {
             sum += pow(left.get(i, j) - right.get(i, j), 2);
         }
+    }
 
     return sqrt(sum);
 }

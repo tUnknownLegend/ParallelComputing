@@ -10,11 +10,12 @@ using std::string;
 
 class Matrix {
 private:
-    int horizontalLength{};
-    int verticalLength{};
     short bucketSize = 32;
 public:
+    int horizontalLength{};
+    int verticalLength{};
     vector<double> data{};
+
     Matrix() = default;
 
     Matrix(int verticalLength,
@@ -33,16 +34,13 @@ public:
 
     void fillMatrixWithRandomValues();
 
-    int verticalSize() const;
-
-    int horizontalSize() const;
 
     double get(const int i, const int j) const {
         return data[i * horizontalLength + j];
     }
 
-    double set(const int i, const int j, const double val) {
-        return data[i * horizontalLength + j] = val;
+    void set(const int i, const int j, const double val) {
+        data[i * horizontalLength + j] = val;
     }
 
     void luParallel(int verticalL, int horizontalL, int shift = 0);
@@ -53,9 +51,11 @@ public:
 
     vector<double> getAllData();
 
-    bool isEqual(Matrix *matrix);
+    bool isEqual(Matrix *matrix) const;
 
-    void swap(Matrix& matrixToSwap);
+    static void swap(Matrix &firstMatrixToSwap, Matrix &secondMatrixToSwap);
+
+    void swap(Matrix &secondMatrixToSwap);
 
     static double frobeniusNorm(const Matrix &lhs, const Matrix &rhs);
 };

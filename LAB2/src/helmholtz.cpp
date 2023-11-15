@@ -5,7 +5,7 @@
 using std::pair;
 using std::vector;
 
-Helmholtz::Helmholtz(const vector<pair<double, double>>& inRegion, const double inH, const double inK) {
+Helmholtz::Helmholtz(const vector<pair<double, double>> &inRegion, const double inH, const double inK) {
     this->region = inRegion;
     this->h = inH;
     const int verticalSize = ((region[0].second - region[0].first) / h);
@@ -21,13 +21,13 @@ Helmholtz::Helmholtz(const vector<pair<double, double>>& inRegion, const double 
         horizontalGrid[j] = (j * (region[1].second - region[1].first) / horizontalSize);
     }
     this->grid = {verticalGrid, horizontalGrid};
-    Matrix temp(grid.first.size(), grid.second.size(), 1.0);
+    Matrix temp(grid.first.size(), grid.second.size(), 0.0);
     this->data = temp;
 
-    for (int i = 0; i < this->data.horizontalSize(); ++i) {
+    for (int i = 0; i < this->data.horizontalLength; ++i) {
         this->data.set(i, 0, 0.0);
     }
-    for (int j = 0; j < this->data.verticalSize(); ++j) {
+    for (int j = 0; j < this->data.verticalLength; ++j) {
         this->data.set(0, j, 0.0);
     }
 }
@@ -37,37 +37,63 @@ Matrix Helmholtz::helmholtzSolve() {
     Matrix previous(this->data);
 
     do {
-        this->data.swap(previous);
-        calcRedAndBlackTreePart(previous, yMultiplayer, {1, 2});
-        calcRedAndBlackTreePart(previous, yMultiplayer, {2, 1});
+        Matrix::swap(this->data, previous);
+
+        for (int j = 1; j < grid.second.size() - 1; ++j) {
+            for (int i = isOddNumber(j) ? 1 : 2;
+                 i < grid.first.size() - 1; i += 2) {
+                forFunc(previous, i, j, yMultiplayer);
+            }
+        }
+
+        for (int j = 1; j < grid.second.size() - 1; ++j) {
+            for (int i = isOddNumber(j) ? 2 : 1;
+                 i < grid.first.size() - 1; i += 2) {
+                forFunc(previous, i, j, yMultiplayer);
+            }
+        }
     } while (Matrix::frobeniusNorm(this->data, previous) > COMPARE_RATE);
+
 
     return this->data;
 }
 
-void Helmholtz::calcRedAndBlackTreePart(const Matrix &previous, const double yMultiplayer,
-                                        const std::pair<int, int> &firstIterationOptions) {
-    for (int j = 1; j < grid.second.size() - 1; ++j) {
-        for (int i = isOddNumber(j) ? firstIterationOptions.first : firstIterationOptions.second;
-             i < grid.first.size() - 1; i += 2) {
-            std::cout << yMultiplayer * (pow(h, 2) * rightSideFunction(grid.first[i], grid.second[j])) << "; ";
-            data.set(j, i, yMultiplayer * (pow(h, 2) * rightSideFunction(grid.first[i], grid.second[j]) +
-                            (previous.get(j + 1, i) +
-                                           previous.get(j - 1, i) +
-                                           previous.get(j, i + 1) +
-                                           previous.get(j, i - 1))));
+Matrix Helmholtz::jacobiSolve() {
+    const double yMultiplayer = 1.0 / (4.0 + pow(k, 2) * pow(h, 2));
+    Matrix previous(this->data);
+
+
+    do {
+        Matrix::swap(this->data, previous);
+
+        for (int j = 1; j < grid.second.size() - 1; ++j) {
+            for (int i = 1; i < grid.first.size() - 1; ++i) {
+                forFunc(previous, i, j, yMultiplayer);
+            }
         }
-    }
+
+    } while (Matrix::frobeniusNorm(this->data, previous) > COMPARE_RATE);
+
+
+    return this->data;
+}
+
+
+void Helmholtz::forFunc(Matrix &previous, const int i, const int j, const double yMultiplayer) {
+    previous.set(j, i, yMultiplayer * (pow(h, 2) * rightSideFunction(grid.first[i], grid.second[j]) +
+                                       (previous.get(j + 1, i) +
+                                        previous.get(j - 1, i) +
+                                        previous.get(j, i + 1) +
+                                        previous.get(j, i - 1))));
 };
 
 double Helmholtz::diffOfSolution() {
-    double maxDiff = 0.0;
-    for (int i = 0; i < this->data.horizontalSize(); ++i) {
-        for (int j = 0; j < this->data.verticalSize(); ++j) {
-            maxDiff = std::max(std::abs(this->data.get(i, j) - preciseSolution(grid.first[i], grid.second[j])),
-                               maxDiff);
+    double sum = 0.0;
+    for (int i = 0; i < this->data.horizontalLength; ++i) {
+        for (int j = 0; j < this->data.verticalLength; ++j) {
+            sum += std::pow(this->data.get(i, j) - preciseSolution(grid.first[i], grid.second[j]), 2);
         }
     }
-    return maxDiff;
+    return sqrt(sum);
 }
 
