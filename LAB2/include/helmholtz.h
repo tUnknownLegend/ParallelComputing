@@ -19,11 +19,7 @@ enum RedAndBlackSolutionMethod {
     RedAndBlackNone = -1,
 };
 
-//const int N = 100;
-//const double h = 1.0 / (N - 1);
-//const double k = 100;
-
-static const std::vector<std::pair<double, double>> region = {
+const std::vector<std::pair<double, double>> region = {
         {0.0, 1.0},
         {0.0, 1.0}
 };
@@ -48,8 +44,8 @@ public:
     norm(const std::vector<double> &firstVector, const std::vector<double> &secondVector, int startIndex, int endIndex);
 
     static void
-    generalY(std::vector<int> &numOfElement, std::vector<double> &y_n, std::vector<double> &y,
-             std::vector<int> &displs, int np,
+    gatherSolution(std::vector<int> &numOfElement, std::vector<double> &y_n, std::vector<double> &y,
+             std::vector<int> &displacementOfElement, int np,
              int myId);
 
     static void preciseSolution(std::vector<double> &u);

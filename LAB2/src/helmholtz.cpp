@@ -22,8 +22,8 @@ double Helmholtz::norm(const vector<double> &firstVector, const vector<double> &
 }
 
 void
-Helmholtz::generalY(vector<int> &numOfElement, vector<double> &y_n, vector<double> &y,
-                    std::vector<int> &displs, const int np,
+Helmholtz::gatherSolution(vector<int> &numOfElement, vector<double> &y_n, vector<double> &y,
+                    std::vector<int> &displacementOfElement, const int np,
                     const int myId) {
     int size;
     if ((myId == 0 || myId == np - 1) && np != 1)
@@ -34,7 +34,7 @@ Helmholtz::generalY(vector<int> &numOfElement, vector<double> &y_n, vector<doubl
         size = numOfElement[myId];
 
     MPI_Gatherv((myId == 0) ? y_n.data() : y_n.data() + N, size, MPI_DOUBLE, y.data(), numOfElement.data(),
-                displs.data(),
+                displacementOfElement.data(),
                 MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
 

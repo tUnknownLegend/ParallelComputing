@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &myId);
 
     std::vector<double> y, y_n, y_gen, u;
-    std::vector<int> el_num(np), displs(np);
+    std::vector<int> el_num(np), displacementOfElement(np);
 
     if (myId == 0) {
         if (N % np == 0) {
@@ -27,9 +27,9 @@ int main(int argc, char **argv) {
             el_num[np - 1] = (N - temp) * N;
         }
 
-        displs[0] = 0;
+        displacementOfElement[0] = 0;
         for (int i = 1; i < np; ++i)
-            displs[i] = displs[i - 1] + el_num[i - 1];
+            displacementOfElement[i] = displacementOfElement[i - 1] + el_num[i - 1];
 
         for (int i = 0; i < np; ++i)
             el_num[i] += 2 * N;
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     }
 
     MPI_Bcast(el_num.data(), np, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(displs.data(), np, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(displacementOfElement.data(), np, MPI_INT, 0, MPI_COMM_WORLD);
 
 
     if (myId == 0) {
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
             std::cout << "iterations: " << iterations << std::endl;
             std::cout << "error: " << norm_f << std::endl;
         }
-        Helmholtz::generalY(el_num, y, y_gen, displs, np, myId);
+        Helmholtz::gatherSolution(el_num, y, y_gen, displacementOfElement, np, myId);
         if (myId == 0)
             std::cout << "diff with precise solution: " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl
                       << std::endl;
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
             std::cout << "iterations: " << iterations << std::endl;
             std::cout << "error: " << norm_f << std::endl;
         }
-        Helmholtz::generalY(el_num, y, y_gen, displs, np, myId);
+        Helmholtz::gatherSolution(el_num, y, y_gen, displacementOfElement, np, myId);
         if (myId == 0)
             std::cout << "diff with precise solution: " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl
                       << std::endl;
