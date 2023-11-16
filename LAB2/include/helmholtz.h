@@ -38,41 +38,47 @@ const double multiplayer = (4.0 + pow(k, 2) * pow(h, 2));
 class Helmholtz {
 private:
     static inline void
-    JacobiSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
+    JacobiSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
+                   int myId,
                    int np, int &shift);
 
     static inline void
-    JacobiSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
+    JacobiSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                       int myId,
                       int np, int &shift);
 
     static inline void
-    JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
+    JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                      int myId,
                      int np, int &shift);
 
     static inline void
-    redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
-                   int np, int &shift);
+    redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
+                        std::vector<int> &elementNumber, int myId,
+                        int np, int &shift);
 
     static inline void
-    redAndBlackSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
-                      int myId,
-                      int np, int &shift);
+    redAndBlackSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
+                           std::vector<int> &elementNumber,
+                           int myId,
+                           int np, int &shift);
 
     static inline void
-    redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
-                     int myId,
-                     int np, int &shift);
+    redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
+                          std::vector<int> &elementNumber,
+                          int myId,
+                          int np, int &shift);
 
     static double
-    solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
+    solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
+             int myId,
              int np, int &iterationCount,
              const std::function<void(std::vector<double> &solution, std::vector<double> &tempSolution,
-                                      std::vector<int> &el_num, int myId,
+                                      std::vector<int> &elementNumber, int myId,
                                       int np, int &shift)> &calc);
 
     static double rightSideFunction(double x, double solution);
+
 public:
 
     static double
@@ -86,12 +92,13 @@ public:
     static void preciseSolution(std::vector<double> &u);
 
     static double
-    Jacobi(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId, int np,
-           int &iterations,
-           JacobiSolutionMethod methodType);
+    jacobiMethod(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
+                 int myId, int np,
+                 int &iterations,
+                 JacobiSolutionMethod methodType);
 
     static double
-    redAndBlackMethod(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> el_num,
+    redAndBlackMethod(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> elementNumber,
                       int myId, int np, int &iterationCount,
                       RedAndBlackSolutionMethod methodType);
 };
