@@ -144,13 +144,40 @@ Helmholtz::JacobiISendIRecv(vector<double> &solution, vector<double> &tempSoluti
     }
 }
 
+double Helmholtz::solveMPI(vector<double> &solution, vector<double> &tempSolution, vector<int> &el_num, int myId,
+                         int np, int &iterationCount,
+                         const std::function<void(vector<double> &solution, vector<double> &tempSolution,
+                                                  vector<int> &el_num, int myId,
+                                                  int np, int &shift)> &calc) {
+    double normValue;
+    int shift = 0;
+    for (int i = 0; i < myId; ++i)
+        shift += el_num[i] / N;
+    shift -= (myId == 0) ? 0 : myId * 2;
+
+    iterationCount = 0;
+    double norma;
+
+    do {
+        ++iterationCount;
+
+        calc(solution, tempSolution, el_num, myId, np, shift);
+
+        norma = norm(solution, tempSolution, (myId == 0) ? 0 : N, (myId == np) ? el_num[myId] : el_num[myId] - N);
+        MPI_Allreduce(&norma, &normValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        tempSolution.swap(solution);
+    } while (normValue > COMPARE_RATE);
+
+    return normValue;
+}
+
 
 double
 Helmholtz::Jacobi(vector<double> &solution, vector<double> &tempSolution, vector<int> &el_num, int myId,
                   int np,
                   int &iterationCount,
                   const JacobiSolutionMethod methodType) {
-    double normValue;
+    double normValue = 0;
     if (np == 1) {
 
         iterationCount = 0;
@@ -169,34 +196,19 @@ Helmholtz::Jacobi(vector<double> &solution, vector<double> &tempSolution, vector
         } while (normValue > COMPARE_RATE);
     }
     if (np > 1) {
-        double norma;
-
-        int shift = 0;
-        for (int i = 0; i < myId; ++i)
-            shift += el_num[i] / N;
-        shift -= (myId == 0) ? 0 : myId * 2;
-
-        iterationCount = 0;
-        do {
-            ++iterationCount;
-            switch (methodType) {
-                case JacobiSendReceive:
-                    JacobiSendRecv(solution, tempSolution, el_num, myId, np, shift);
-                    break;
-                case JacobiSendAndReceive:
-                    JacobiSendAndRecv(solution, tempSolution, el_num, myId, np, shift);
-                    break;
-                case JacobiISendIReceive:
-                    JacobiISendIRecv(solution, tempSolution, el_num, myId, np, shift);
-                    break;
-                default:
-                    std::cerr << methodType << ". method not implemented\n";
-            }
-
-            norma = norm(solution, tempSolution, (myId == 0) ? 0 : N, (myId == np) ? el_num[myId] : el_num[myId] - N);
-            MPI_Allreduce(&norma, &normValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-            tempSolution.swap(solution);
-        } while (normValue > COMPARE_RATE);
+        switch (methodType) {
+            case JacobiSendReceive:
+                normValue = solveMPI(solution, tempSolution, el_num, myId, np, iterationCount, JacobiSendRecv);
+                break;
+            case JacobiSendAndReceive:
+                normValue = solveMPI(solution, tempSolution, el_num, myId, np, iterationCount, JacobiSendAndRecv);
+                break;
+            case JacobiISendIReceive:
+                normValue = solveMPI(solution, tempSolution, el_num, myId, np, iterationCount, JacobiISendIRecv);
+                break;
+            default:
+                std::cerr << methodType << ". method not implemented\n";
+        }
     }
     if (myId == 0) {
         switch (methodType) {

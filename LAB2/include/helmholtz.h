@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <functional>
 
 enum JacobiSolutionMethod {
     JacobiSendReceive,
@@ -40,14 +41,25 @@ private:
     JacobiSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
                    int np, int &shift);
 
-    static inline void JacobiSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
-                                             int np, int &shift);
+    static inline void
+    JacobiSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
+                      int myId,
+                      int np, int &shift);
 
-    static inline void JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
-                                         int np, int &shift);
+    static inline void
+    JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
+                     int myId,
+                     int np, int &shift);
 
-public:
+    static double
+    solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
+             int np, int &iterationCount,
+             const std::function<void(std::vector<double> &solution, std::vector<double> &tempSolution,
+                                      std::vector<int> &el_num, int myId,
+                                      int np, int &shift)> &calc);
+
     static double rightSideFunction(double x, double solution);
+public:
 
     static double
     norm(const std::vector<double> &firstVector, const std::vector<double> &secondVector, int startIndex, int endIndex);
