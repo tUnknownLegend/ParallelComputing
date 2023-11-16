@@ -1,7 +1,5 @@
 ﻿#include <iostream>
 #include <mpi.h>
-#include "jacobi.h"
-#include "redAndBlack.h"
 #include "helmholtz.h"
 
 using std::cout;
@@ -32,14 +30,6 @@ int main(int argc, char **argv) {
     helmholtz4->solve(RedAndBlackSendReceive, "RedAndBlackSendReceive");
     helmholtz5->solve(RedAndBlackSendAndReceive, "RedAndBlackSendAndReceive");
     helmholtz6->solve(RedAndBlackISendIReceive, "RedAndBlackISendIReceive");
-
-//    JacobiSendRecv(myId, numOfProcessors, false);
-//    JacobiSendRecv(myId, numOfProcessors, true);
-//    JacobiISendIRecv(myId, numOfProcessors);
-//
-//    redAndBlackSendRecv(myId, numOfProcessors);
-//    redBlackSendAndRecv(myId, numOfProcessors);
-//    redBlackISendIRecv(myId, numOfProcessors);
 
     MPI_Finalize();
     return 0;

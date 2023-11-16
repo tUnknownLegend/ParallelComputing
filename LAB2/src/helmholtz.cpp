@@ -1,5 +1,4 @@
 #include "helmholtz.h"
-#include "const.h"
 #include "shared.h"
 #include <mpi.h>
 #include <iostream>
@@ -10,7 +9,7 @@ Helmholtz::Helmholtz(const int inMyId,
     numOfProcessors = inNumOfProcessors;
 }
 
-void Helmholtz::solve(const SolutionMethod method, const std::string& name) {
+void Helmholtz::solve(const SolutionMethod method, const std::string &name) {
     str_per_proc.resize(numOfProcessors, n / numOfProcessors);
     nums_start.resize(numOfProcessors, 0);
 
@@ -87,7 +86,7 @@ void Helmholtz::solve(const SolutionMethod method, const std::string& name) {
 
         // name here
         std::cout << "\n\n" << method << ". " << name;
-        std::cout << "\n\t norm: " << proverka(y, analitical_sol);
+        std::cout << "\n\t norm: " << calcDiff(y, analitical_sol);
         std::cout << "\n\t iterationsNum: " << iterationsNum;
         printf("\n\t time: %.4f", stopWatch);
     }
@@ -128,7 +127,7 @@ void Helmholtz::calcJacobiSendReceive() {
                          temp[(str_local - 1) * n + (j - 1)] +
                          pow(h, 2) * right_part((nums_local + (str_local - 1)) * h, j * h)) * yMultiplayer;
 
-        norm_local = proverka(temp, solution);
+        norm_local = calcDiff(temp, solution);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
@@ -172,7 +171,7 @@ void Helmholtz::calcJacobiSendAndReceive() {
                          temp[(str_local - 1) * n + (j - 1)] +
                          pow(h, 2) * right_part((nums_local + (str_local - 1)) * h, j * h)) * yMultiplayer;
 
-        norm_local = proverka(temp, solution);
+        norm_local = calcDiff(temp, solution);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
@@ -253,7 +252,7 @@ void Helmholtz::calcJacobiISendIReceive() {
                          temp[(str_local - 1) * n + (j - 1)] +
                          pow(h, 2) * right_part((nums_local + (str_local - 1)) * h, j * h)) * yMultiplayer;
 
-        norm_local = proverka(temp, solution);
+        norm_local = calcDiff(temp, solution);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
@@ -333,7 +332,7 @@ void Helmholtz::calcRedAndBlackSendReceive() {
                          solution[(str_local - 1) * n + (j - 1)] +
                          pow(h, 2) * right_part((nums_local + (str_local - 1)) * h, j * h)) * yMultiplayer;
 
-        norm_local = proverka(temp, solution);
+        norm_local = calcDiff(temp, solution);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
@@ -410,7 +409,7 @@ void Helmholtz::calcRedAndBlackSendAndReceive() {
                          pow(h, 2) * right_part((nums_local + (str_local - 1)) * h, j * h)) * yMultiplayer;
 
 
-        norm_local = proverka(temp, solution);
+        norm_local = calcDiff(temp, solution);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
@@ -522,11 +521,31 @@ void Helmholtz::calcRedAndBlackISendIReceive() {
                          pow(h, 2) * right_part((nums_local + (str_local - 1)) * h, j * h)) * yMultiplayer;
 
 
-        norm_local = proverka(temp, solution);
+        norm_local = calcDiff(temp, solution);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
         if (norm_err < COMPARE_RATE)
             flag = false;
     }
+}
+
+double Helmholtz::right_part(double x, double y) {
+    return 2.0 * sin(M_PI * y) + pow(k, 2) * (1 - x) * x * sin(M_PI * y) + pow(M_PI, 2) * (1 - x) * x * sin(M_PI * y);
+}
+
+double Helmholtz::u_exact(double x, double y) {
+    return (1.0 - x) * x * sin(M_PI * y);
+}
+
+double Helmholtz::calcDiff(const vector<double> &a, const vector<double> &b) {
+    double max = 0.0;
+    double tmp = 0.0;
+
+    for (int i = 0; i < a.size(); ++i) {
+        tmp = std::abs(a[i] - b[i]);
+        if (tmp > max)
+            max = tmp;
+    }
+    return max;
 }
