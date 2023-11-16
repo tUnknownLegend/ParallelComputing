@@ -3,10 +3,20 @@
 
 #include <vector>
 #include <cmath>
+#include <string>
 
 using std::vector;
 using std::pair;
 using std::pow;
+
+enum SolutionMethod {
+    JacobiSendReceive,
+    JacobiSendAndReceive,
+    JacobiISendIReceive,
+    RedAndBlackSendReceive,
+    RedAndBlackSendAndReceive,
+    RedAndBlackISendIReceive
+};
 
 class Helmholtz {
 private:
@@ -33,17 +43,27 @@ private:
 
     int iterationsNum;
     bool flag;
-public:
-    Helmholtz(int inMyId,
-              int inNumOfProcessors);
 
-    void solve();
+    vector<double> y;
 
+protected:
     void calcJacobiISendIReceive();
 
     void calcJacobiSendReceive();
 
     void calcJacobiSendAndReceive();
+
+    void calcRedAndBlackSendReceive();
+
+    void calcRedAndBlackSendAndReceive();
+
+    void calcRedAndBlackISendIReceive();
+
+public:
+    Helmholtz(int inMyId,
+              int inNumOfProcessors);
+
+    void solve(SolutionMethod method, const std::string& name);
 };
 
 #endif //LAB2_HELMHOLTZ_H

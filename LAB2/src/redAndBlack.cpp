@@ -264,10 +264,7 @@ void redBlackISendIRecv(int myId,
     int str_local, nums_local;
     double norm_local, norm_err;
 
-    MPI_Request *send_req1;
-    MPI_Request *send_req2;
-    MPI_Request *recv_req1;
-    MPI_Request *recv_req2;
+
 
     int source_proc = myId ? myId - 1 : numOfProcessors - 1;
     int dest_proc = (myId != (numOfProcessors - 1)) ? myId + 1 : 0;
@@ -278,13 +275,17 @@ void redBlackISendIRecv(int myId,
     //str_split(myId, numOfProcessors, str_local, nums_local);
     str_split(myId, numOfProcessors, str_local, nums_local, str_per_proc, nums_start);
 
-    send_req1 = new MPI_Request[2], recv_req1 = new MPI_Request[2];
-    send_req2 = new MPI_Request[2], recv_req2 = new MPI_Request[2];
+
 
     vector<double> y_local(str_local * n);
     vector<double> y_next_top(n);
     vector<double> y_prev_low(n);
     vector<double> temp(y_local.size());
+
+    auto *send_req1 = new MPI_Request[2];
+    auto *send_req2 = new MPI_Request[2];
+    auto *recv_req1 = new MPI_Request[2];
+    auto *recv_req2 = new MPI_Request[2];
 
     // пересылаем верхние и нижние строки temp
     MPI_Send_init(temp.data(), rcount, MPI_DOUBLE, source_proc, 0, MPI_COMM_WORLD, send_req1);
