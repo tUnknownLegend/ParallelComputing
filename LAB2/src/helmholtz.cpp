@@ -3,6 +3,10 @@
 #include <mpi.h>
 #include <iostream>
 
+using std::vector;
+using std::pair;
+using std::pow;
+
 Helmholtz::Helmholtz(const int inMyId,
                      const int inNumOfProcessors) {
     myId = inMyId;

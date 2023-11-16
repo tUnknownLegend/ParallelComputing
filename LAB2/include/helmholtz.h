@@ -5,10 +5,6 @@
 #include <cmath>
 #include <string>
 
-using std::vector;
-using std::pair;
-using std::pow;
-
 enum SolutionMethod {
     JacobiSendReceive,
     JacobiSendAndReceive,
@@ -38,8 +34,8 @@ private:
 
     double u_exact(double x, double y);
 
-    vector<int> str_per_proc;
-    vector<int> nums_start;
+    std::vector<int> str_per_proc;
+    std::vector<int> nums_start;
     int str_local;
     int nums_local;
     int myId;
@@ -51,10 +47,10 @@ private:
     int scount;
     int rcount;
 
-    vector<double> solution;
-    vector<double> nextTopSolution;
-    vector<double> prevBottomSolution;
-    vector<double> temp;
+    std::vector<double> solution;
+    std::vector<double> nextTopSolution;
+    std::vector<double> prevBottomSolution;
+    std::vector<double> temp;
 
     double norm_local;
     double norm_err;
@@ -62,7 +58,7 @@ private:
     int iterationsNum;
     bool flag;
 
-    vector<double> y;
+    std::vector<double> y;
 protected:
     void calcJacobiISendIReceive();
 
@@ -76,7 +72,7 @@ protected:
 
     void calcRedAndBlackISendIReceive();
 
-    double calcDiff(const vector<double> &a, const vector<double> &b);
+    double calcDiff(const std::vector<double> &a, const std::vector<double> &b);
 
 public:
     Helmholtz(int inMyId,
