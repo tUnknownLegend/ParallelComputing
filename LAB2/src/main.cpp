@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     std::vector<double> preciseVectorSolution;
     
     if (myId == 0) {
-        std::cout << "np: " << np << std::endl << std::endl;
+        std::cout << "number of processors: " << np << std::endl << std::endl;
         resultSolve.resize(N * N, 0);
         preciseVectorSolution.resize(N * N);
         Helmholtz::preciseSolution(preciseVectorSolution);
