@@ -51,6 +51,20 @@ private:
                      int myId,
                      int np, int &shift);
 
+    static inline void
+    redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
+                   int np, int &shift);
+
+    static inline void
+    redAndBlackSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
+                      int myId,
+                      int np, int &shift);
+
+    static inline void
+    redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num,
+                     int myId,
+                     int np, int &shift);
+
     static double
     solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId,
              int np, int &iterationCount,
