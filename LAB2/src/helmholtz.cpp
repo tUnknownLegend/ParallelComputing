@@ -65,14 +65,14 @@ void Helmholtz::calcJacobiSendReceive() {
         iterationsNum++;
         std::swap(temp, solution);
 
-        // пересылаем нижние и верхние строки
-        MPI_Sendrecv(temp.data() + (str_local - 1) * n, scount, MPI_DOUBLE, destProcess, 42,
-                     prevBottomSolution.data(),
-                     rcount,
-                     MPI_DOUBLE, sourceProcess, 42, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-        MPI_Sendrecv(temp.data(), rcount, MPI_DOUBLE, sourceProcess, 46, nextTopSolution.data(), scount, MPI_DOUBLE,
-                     destProcess,
-                     46, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+        // пересылаем нижние строки всеми процессами кроме последнего
+        MPI_Send(temp.data() + (str_local - 1) * n, scount, MPI_DOUBLE, destProcess, 42, MPI_COMM_WORLD);
+        MPI_Recv(prevBottomSolution.data(), rcount, MPI_DOUBLE, sourceProcess, 42, MPI_COMM_WORLD,
+                 MPI_STATUSES_IGNORE);
+
+        // пересылаем верхние строки всеми процессами кроме нулевого
+        MPI_Send(temp.data(), rcount, MPI_DOUBLE, sourceProcess, 46, MPI_COMM_WORLD);
+        MPI_Recv(nextTopSolution.data(), scount, MPI_DOUBLE, destProcess, 46, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
 
         /* пересчитываем все строки в полосе кроме верхней и нижней */
         for (int i = 1; i < str_local - 1; ++i)
@@ -109,14 +109,14 @@ void Helmholtz::calcJacobiSendAndReceive() {
         iterationsNum++;
         std::swap(temp, solution);
 
-        // пересылаем нижние строки всеми процессами кроме последнего
-        MPI_Send(temp.data() + (str_local - 1) * n, scount, MPI_DOUBLE, destProcess, 42, MPI_COMM_WORLD);
-        MPI_Recv(prevBottomSolution.data(), rcount, MPI_DOUBLE, sourceProcess, 42, MPI_COMM_WORLD,
-                 MPI_STATUSES_IGNORE);
-
-        // пересылаем верхние строки всеми процессами кроме нулевого
-        MPI_Send(temp.data(), rcount, MPI_DOUBLE, sourceProcess, 46, MPI_COMM_WORLD);
-        MPI_Recv(nextTopSolution.data(), scount, MPI_DOUBLE, destProcess, 46, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+        // пересылаем нижние и верхние строки
+        MPI_Sendrecv(temp.data() + (str_local - 1) * n, scount, MPI_DOUBLE, destProcess, 42,
+                     prevBottomSolution.data(),
+                     rcount,
+                     MPI_DOUBLE, sourceProcess, 42, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+        MPI_Sendrecv(temp.data(), rcount, MPI_DOUBLE, sourceProcess, 46, nextTopSolution.data(), scount, MPI_DOUBLE,
+                     destProcess,
+                     46, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
 
         /* пересчитываем все строки в полосе кроме верхней и нижней */
         for (int i = 1; i < str_local - 1; ++i)
