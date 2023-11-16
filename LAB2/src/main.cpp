@@ -5,16 +5,16 @@
 #include "helmholtz.h"
 
 int main(int argc, char **argv) {
-    int myid, np, iterations;
+    int myId, np, iterations;
     double t1, t2, t3, t4, norm_f;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &np);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myId);
 
     std::vector<double> y, y_n, y_gen, u;
     std::vector<int> el_num(np), displs(np);
 
-    if (myid == 0) {
+    if (myId == 0) {
         if (N % np == 0) {
             for (int i = 0; i < np; ++i)
                 el_num[i] = (N / np) * N;
@@ -41,84 +41,85 @@ int main(int argc, char **argv) {
     MPI_Bcast(displs.data(), np, MPI_INT, 0, MPI_COMM_WORLD);
 
 
-    if (myid == 0) {
+    if (myId == 0) {
         std::cout << "np: " << np << std::endl << std::endl;
         y_gen.resize(N * N, 0);
         u.resize(N * N);
-        Helmholtz::analyt_sol(u);
+        Helmholtz::preciseSolution(u);
     }
 
     if (np == 1) {
-        y.resize(el_num[myid], 0);
-        Helmholtz::zero(y);
-        y_n.resize(el_num[myid], 0);
-        Helmholtz::zero(y_n);
+        y.resize(el_num[myId], 0);
+        std::fill(y.begin(), y.end(), 0.0);
+        y_n.resize(el_num[myId], 0);
+        std::fill(y_n.begin(), y_n.end(), 0.0);
 
         y.resize(N * N, 0);
-        Helmholtz::zero(y);
+        std::fill(y.begin(), y.end(), 0.0);
         y_n.resize(N * N, 0);
-        Helmholtz::zero(y_n);
+        std::fill(y_n.begin(), y_n.end(), 0.0);
 
 
         t1 = MPI_Wtime();
-        norm_f = Helmholtz::Jacobi(y, y_n, el_num, myid, np, iterations, 0);
+        norm_f = Helmholtz::Jacobi(y, y_n, el_num, myId, np, iterations, JacobiNone);
         t2 = MPI_Wtime();
-        std::cout << std::endl << "Jacobi seq" << std::endl;
+        std::cout << std::endl << "Jacobi seq: " << std::endl;
         std::cout << "Time = " << t2 - t1 << std::endl;
         std::cout << "Iterations = " << iterations << std::endl;
         std::cout << "Error = " << norm_f << std::endl;
         std::cout << "|y - u| = " << Helmholtz::norm(y, u, 0, N * N) << std::endl << std::endl;
 
-        Helmholtz::zero(y);
-        Helmholtz::zero(y_n);
+        std::fill(y.begin(), y.end(), 0.0);
+        std::fill(y_n.begin(), y_n.end(), 0.0);
 
         t3 = MPI_Wtime();
-        norm_f = Helmholtz::Zeidel(y, y_n, el_num, myid, np, iterations, 0);
+        norm_f = Helmholtz::redAndBlackMethod(y, y_n, el_num, myId, np, iterations, RedAndBlackNone);
         t4 = MPI_Wtime();
-        std::cout << std::endl << "Zeidel seq" << std::endl;
+        std::cout << std::endl << "redAndBlackM seq: " << std::endl;
         std::cout << "Time = " << t4 - t3 << std::endl;
         std::cout << "Iterations = " << iterations << std::endl;
         std::cout << "Error = " << norm_f << std::endl;
         std::cout << "|y - u| = " << Helmholtz::norm(y, u, 0, N * N) << std::endl << std::endl;
     }
-    for (int send_type = 1; send_type <= 3; ++send_type) {
-        if (np > 1) {
-            y.resize(el_num[myid], 0);
-            Helmholtz::zero(y);
-            y_n.resize(el_num[myid], 0);
-            Helmholtz::zero(y_n);
+    for (int methodType = 0; methodType < 3 && np > 1; ++methodType) {
+        y.resize(el_num[myId], 0);
+        std::fill(y.begin(), y.end(), 0.0);
+        y_n.resize(el_num[myId], 0);
+        std::fill(y_n.begin(), y_n.end(), 0.0);
 
-            t1 = MPI_Wtime();
-            norm_f = Helmholtz::Jacobi(y, y_n, el_num, myid, np, iterations, send_type);
-            t2 = MPI_Wtime();
-            if (myid == 0) {
-                std::cout << "Time = " << t2 - t1 << std::endl;
-                std::cout << "Iterations = " << iterations << std::endl;
-                std::cout << "Error = " << norm_f << std::endl;
-            }
-            Helmholtz::generalY(el_num, y, y_gen, displs, np, myid);
-            if (myid == 0)
-                std::cout << "|y - u| = " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl << std::endl;
-            MPI_Barrier(MPI_COMM_WORLD);
-
-            y.resize(el_num[myid], 0);
-            Helmholtz::zero(y);
-            y_n.resize(el_num[myid], 0);
-            Helmholtz::zero(y_n);
-
-            t1 = MPI_Wtime();
-            norm_f = Helmholtz::Zeidel(y, y_n, el_num, myid, np, iterations, send_type);
-            t2 = MPI_Wtime();
-            if (myid == 0) {
-                std::cout << "Time = " << t2 - t1 << std::endl;
-                std::cout << "Iterations = " << iterations << std::endl;
-                std::cout << "Error = " << norm_f << std::endl;
-            }
-            Helmholtz::generalY(el_num, y, y_gen, displs, np, myid);
-            if (myid == 0)
-                std::cout << "|y - u| = " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl << std::endl;
-            MPI_Barrier(MPI_COMM_WORLD);
+        t1 = MPI_Wtime();
+        norm_f = Helmholtz::Jacobi(y, y_n, el_num, myId, np, iterations, static_cast<JacobiSolutionMethod>(methodType));
+        t2 = MPI_Wtime();
+        if (myId == 0) {
+            std::cout << "exec time: " << t2 - t1 << std::endl;
+            std::cout << "iterations: " << iterations << std::endl;
+            std::cout << "error: " << norm_f << std::endl;
         }
+        Helmholtz::generalY(el_num, y, y_gen, displs, np, myId);
+        if (myId == 0)
+            std::cout << "diff with precise solution: " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl
+                      << std::endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        y.resize(el_num[myId], 0);
+        std::fill(y.begin(), y.end(), 0.0);
+        y_n.resize(el_num[myId], 0);
+        std::fill(y_n.begin(), y_n.end(), 0.0);
+
+        t1 = MPI_Wtime();
+        norm_f = Helmholtz::redAndBlackMethod(y, y_n, el_num, myId, np, iterations,
+                                              static_cast<RedAndBlackSolutionMethod>(methodType));
+        t2 = MPI_Wtime();
+        if (myId == 0) {
+            std::cout << "exec time: " << t2 - t1 << std::endl;
+            std::cout << "iterations: " << iterations << std::endl;
+            std::cout << "error: " << norm_f << std::endl;
+        }
+        Helmholtz::generalY(el_num, y, y_gen, displs, np, myId);
+        if (myId == 0)
+            std::cout << "diff with precise solution: " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl
+                      << std::endl;
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     MPI_Finalize();
 }

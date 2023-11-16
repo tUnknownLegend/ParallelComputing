@@ -5,13 +5,18 @@
 #include <cmath>
 #include <string>
 
-enum SolutionMethod {
+enum JacobiSolutionMethod {
     JacobiSendReceive,
     JacobiSendAndReceive,
     JacobiISendIReceive,
+    JacobiNone = -1,
+};
+
+enum RedAndBlackSolutionMethod {
     RedAndBlackSendReceive,
     RedAndBlackSendAndReceive,
-    RedAndBlackISendIReceive
+    RedAndBlackISendIReceive,
+    RedAndBlackNone = -1,
 };
 
 //const int N = 100;
@@ -37,9 +42,7 @@ class Helmholtz {
 private:
 
 public:
-    static void zero(std::vector<double> &A);
-
-    static double f(double x, double y);
+    static double rightSideFunction(double x, double y);
 
     static double
     norm(const std::vector<double> &firstVector, const std::vector<double> &secondVector, int startIndex, int endIndex);
@@ -47,18 +50,18 @@ public:
     static void
     generalY(std::vector<int> &numOfElement, std::vector<double> &y_n, std::vector<double> &y,
              std::vector<int> &displs, int np,
-             int myid);
+             int myId);
 
-    static void analyt_sol(std::vector<double> &u);
+    static void preciseSolution(std::vector<double> &u);
 
     static double
-    Jacobi(std::vector<double> &y, std::vector<double> &y_n, std::vector<int> &el_num, int myid, int np,
+    Jacobi(std::vector<double> &y, std::vector<double> &y_n, std::vector<int> &el_num, int myId, int np,
            int &iterations,
-           int send_type);
+           JacobiSolutionMethod methodType);
 
     static double
-    Zeidel(std::vector<double> &y, std::vector<double> &y_n, std::vector<int> el_num, int myid, int np, int &iterations,
-           int send_type);
+    redAndBlackMethod(std::vector<double> &y, std::vector<double> &y_n, std::vector<int> el_num, int myId, int np, int &iterationCount,
+                      RedAndBlackSolutionMethod methodType);
 };
 
 #endif //LAB2_HELMHOLTZ_H
