@@ -240,46 +240,20 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
         iterationCount = 0;
         do {
             ++iterationCount;
-            MPI_Request req_send_up, req_recv_up, req_send_down, req_recv_down;
-
-            if (methodType == RedAndBlackSendReceive) {
-                MPI_Send(tempSolution.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                         (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
-                MPI_Recv(tempSolution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
-                         MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-
-                MPI_Send(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
-                         MPI_COMM_WORLD);
-                MPI_Recv(tempSolution.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                         (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-            }
-            if (methodType == RedAndBlackSendAndReceive) {
-                MPI_Sendrecv(tempSolution.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                             (myId != np - 1) ? myId + 1 : 0, 3, tempSolution.data(), (myId != 0) ? N : 0, MPI_DOUBLE,
-                             (myId != 0) ? myId - 1 : np - 1, 3, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-
-                MPI_Sendrecv(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1,
-                             4,
-                             tempSolution.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                             (myId != np - 1) ? myId + 1 : 0, 4, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-            }
-            if (methodType == RedAndBlackISendIReceive) {
-
-                if (myId != np - 1) {
-                    MPI_Isend(tempSolution.data() + el_num[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
-                              &req_send_up);
-                    MPI_Irecv(tempSolution.data() + el_num[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
-                              &req_recv_up);
-                }
-                if (myId != 0) {
-                    MPI_Irecv(tempSolution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
-                    MPI_Isend(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
-                }
-            }
 
             switch (methodType) {
-                case RedAndBlackSendReceive:
-                case RedAndBlackSendAndReceive: {
+                case RedAndBlackSendReceive: {
+                    MPI_Send(tempSolution.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                             (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
+                    MPI_Recv(tempSolution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
+                             MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    MPI_Send(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1,
+                             2,
+                             MPI_COMM_WORLD);
+                    MPI_Recv(tempSolution.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                             (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
                     for (int i = 1; i < el_num[myId] / N - 1; ++i) {
                         for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
                             solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
@@ -288,47 +262,7 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
                                                     tempSolution[(i + 1) * N + j])) / multiplayer;
                         }
                     }
-                }
-                    break;
-                case RedAndBlackISendIReceive: {
-                    for (int i = 2; i < el_num[myId] / N - 2; ++i) {
-                        for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
-                            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                                   (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
-                                                    tempSolution[(i - 1) * N + j] +
-                                                    tempSolution[(i + 1) * N + j])) / multiplayer;
-                        }
-                    }
-                    if (myId != 0) {
-                        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
-                    }
-                    if (myId != np - 1) {
-                        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
-                    }
 
-                    int i = 1;
-                    for (int j = ((i + shift) % 2) + 1; j < N - 1; ++j) {
-                        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                               (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
-                                                tempSolution[(i - 1) * N + j] +
-                                                tempSolution[(i + 1) * N + j])) / multiplayer;
-                    }
-
-                    i = el_num[myId] / N - 2;
-                    for (int j = ((i + shift) % 2) + 1; j < N - 1; ++j) {
-                        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                               (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
-                                                tempSolution[(i - 1) * N + j] +
-                                                tempSolution[(i + 1) * N + j])) / multiplayer;
-                    }
-                }
-                    break;
-                default:
-                    std::cerr << "method not implemented";
-            }
-
-            switch (methodType) {
-                case RedAndBlackSendReceive: {
                     MPI_Send(solution.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
                              (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
                     MPI_Recv(solution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
@@ -339,9 +273,38 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
                              MPI_COMM_WORLD);
                     MPI_Recv(solution.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
                              (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    for (int i = 1; i < el_num[myId] / N - 1; ++i) {
+                        for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
+                            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                                   (solution[i * N + j - 1] + solution[i * N + j + 1] +
+                                                    solution[(i - 1) * N + j] +
+                                                    solution[(i + 1) * N + j])) / multiplayer;
+                        }
+                    }
                 }
                     break;
                 case RedAndBlackSendAndReceive: {
+                    MPI_Sendrecv(tempSolution.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                                 (myId != np - 1) ? myId + 1 : 0, 3, tempSolution.data(), (myId != 0) ? N : 0,
+                                 MPI_DOUBLE,
+                                 (myId != 0) ? myId - 1 : np - 1, 3, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    MPI_Sendrecv(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE,
+                                 (myId != 0) ? myId - 1 : np - 1,
+                                 4,
+                                 tempSolution.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                                 (myId != np - 1) ? myId + 1 : 0, 4, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    for (int i = 1; i < el_num[myId] / N - 1; ++i) {
+                        for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
+                            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                                   (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
+                                                    tempSolution[(i - 1) * N + j] +
+                                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                        }
+                    }
+
                     MPI_Sendrecv(solution.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
                                  (myId != np - 1) ? myId + 1 : 0, 3, solution.data(), (myId != 0) ? N : 0, MPI_DOUBLE,
                                  (myId != 0) ? myId - 1 : np - 1, 3, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
@@ -350,9 +313,62 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
                                  4,
                                  solution.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
                                  (myId != np - 1) ? myId + 1 : 0, 4, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    for (int i = 1; i < el_num[myId] / N - 1; ++i) {
+                        for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
+                            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                                   (solution[i * N + j - 1] + solution[i * N + j + 1] +
+                                                    solution[(i - 1) * N + j] +
+                                                    solution[(i + 1) * N + j])) / multiplayer;
+                        }
+                    }
                 }
                     break;
                 case RedAndBlackISendIReceive: {
+                    MPI_Request req_send_up, req_recv_up, req_send_down, req_recv_down;
+
+                    if (myId != np - 1) {
+                        MPI_Isend(tempSolution.data() + el_num[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5,
+                                  MPI_COMM_WORLD,
+                                  &req_send_up);
+                        MPI_Irecv(tempSolution.data() + el_num[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
+                                  &req_recv_up);
+                    }
+                    if (myId != 0) {
+                        MPI_Irecv(tempSolution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
+                        MPI_Isend(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
+                    }
+
+                    //
+
+                    for (int i = 2; i < el_num[myId] / N - 2; ++i)
+                        for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2)
+                            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                                   (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
+                                                    tempSolution[(i - 1) * N + j] +
+                                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+
+                    if (myId != 0)
+                        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
+                    if (myId != np - 1)
+                        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+
+                    int index = 1;
+                    for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j)
+                        solution[index * N + j] = (h * h * rightSideFunction((index + shift) * h, j * h) +
+                                                   (tempSolution[index * N + j - 1] + tempSolution[index * N + j + 1] +
+                                                    tempSolution[(index - 1) * N + j] +
+                                                    tempSolution[(index + 1) * N + j])) / multiplayer;
+
+                    index = el_num[myId] / N - 2;
+                    for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j)
+                        solution[index * N + j] = (h * h * rightSideFunction((index + shift) * h, j * h) +
+                                                   (tempSolution[index * N + j - 1] + tempSolution[index * N + j + 1] +
+                                                    tempSolution[(index - 1) * N + j] +
+                                                    tempSolution[(index + 1) * N + j])) / multiplayer;
+
+                    //
+
                     if (myId != np - 1) {
                         MPI_Isend(solution.data() + el_num[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
                                   &req_send_up);
@@ -363,53 +379,41 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
                         MPI_Irecv(solution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
                         MPI_Isend(solution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
                     }
+
+                    //
+
+                    for (int i = 2; i < el_num[myId] / N - 2; ++i)
+                        for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2)
+                            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                                   (solution[i * N + j - 1] + solution[i * N + j + 1] +
+                                                    solution[(i - 1) * N + j] +
+                                                    solution[(i + 1) * N + j])) / multiplayer;
+
+
+                    if (myId != 0)
+                        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
+                    if (myId != np - 1)
+                        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+
+                    int i = 1;
+                    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2)
+                        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                               (solution[i * N + j - 1] + solution[i * N + j + 1] +
+                                                solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
+                                              multiplayer;
+
+                    i = el_num[myId] / N - 2;
+                    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2)
+                        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                               (solution[i * N + j - 1] + solution[i * N + j + 1] +
+                                                solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
+                                              multiplayer;
+
+                    //
                 }
                     break;
                 default:
                     std::cerr << "method not implemented";
-            }
-
-            if (methodType == RedAndBlackSendReceive || methodType == RedAndBlackSendAndReceive) {
-                for (int i = 1; i < el_num[myId] / N - 1; ++i) {
-                    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-                        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                               (solution[i * N + j - 1] + solution[i * N + j + 1] +
-                                                solution[(i - 1) * N + j] +
-                                                solution[(i + 1) * N + j])) / multiplayer;
-                    }
-                }
-            }
-
-            if (methodType == RedAndBlackISendIReceive) {
-                for (int i = 2; i < el_num[myId] / N - 2; ++i) {
-                    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-                        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                               (solution[i * N + j - 1] + solution[i * N + j + 1] +
-                                                solution[(i - 1) * N + j] +
-                                                solution[(i + 1) * N + j])) / multiplayer;
-                    }
-                }
-
-                if (myId != 0)
-                    MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
-                if (myId != np - 1)
-                    MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
-
-                int i = 1;
-                for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-                    solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                           (solution[i * N + j - 1] + solution[i * N + j + 1] +
-                                            solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
-                                          multiplayer;
-                }
-
-                i = el_num[myId] / N - 2;
-                for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-                    solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                           (solution[i * N + j - 1] + solution[i * N + j + 1] +
-                                            solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
-                                          multiplayer;
-                }
             }
 
             norma = norm(solution, tempSolution, (myId == 0) ? 0 : N, (myId == np) ? el_num[myId] : el_num[myId] - N);
