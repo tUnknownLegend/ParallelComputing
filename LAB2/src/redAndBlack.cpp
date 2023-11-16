@@ -11,7 +11,6 @@ void redAndBlackSendRecv(int myId,
 
     str_split(myId, numOfProcessors, str_local, nums_local, str_per_proc, nums_start);
 
-
     vector<double> y_local(str_local * n);
     vector<double> y_next_top(n);
     vector<double> y_prev_low(n);

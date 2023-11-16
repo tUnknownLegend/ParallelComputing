@@ -29,9 +29,8 @@ void JacobiSendRecv(const int myId,
     double t1 = -MPI_Wtime();
 
     int iterations = 0;
-    bool flag = true;
     vector<double> temp(y_local.size());
-    while (flag) {
+    while (norm_err < COMPARE_RATE) {
         iterations++;
         std::swap(temp, y_local);
 
@@ -68,8 +67,6 @@ void JacobiSendRecv(const int myId,
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-        if (norm_err < COMPARE_RATE)
-            flag = false;
     }
 
     t1 += MPI_Wtime();
@@ -122,9 +119,8 @@ void JacobiSendAndRecv(const int myId,
     int rcount = myId ? n : 0;
 
     int iterations = 0;
-    bool flag = true;
     vector<double> temp(y_local.size());
-    while (flag) {
+    while (norm_err < COMPARE_RATE) {
         iterations++;
 
         std::swap(temp, y_local);
@@ -160,8 +156,6 @@ void JacobiSendAndRecv(const int myId,
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-        if (norm_err < COMPARE_RATE)
-            flag = false;
     }
 
     t1 += MPI_Wtime();
@@ -238,8 +232,7 @@ void JacobiISendIRecv(const int myId,
     double t1 = -MPI_Wtime();
 
     int iterations = 0;
-    bool flag = true;
-    while (flag) {
+    while (norm_err < COMPARE_RATE) {
         iterations++;
 
         std::swap(temp, y_local);
@@ -292,9 +285,6 @@ void JacobiISendIRecv(const int myId,
         norm_local = proverka(temp, y_local);
 
         MPI_Allreduce(&norm_local, &norm_err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
-        if (norm_err < COMPARE_RATE)
-            flag = false;
     }
 
     t1 += MPI_Wtime();
