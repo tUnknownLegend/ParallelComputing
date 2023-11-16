@@ -38,25 +38,26 @@ class Helmholtz {
 private:
 
 public:
-    static double rightSideFunction(double x, double y);
+    static double rightSideFunction(double x, double solution);
 
     static double
     norm(const std::vector<double> &firstVector, const std::vector<double> &secondVector, int startIndex, int endIndex);
 
     static void
-    gatherSolution(std::vector<int> &numOfElement, std::vector<double> &y_n, std::vector<double> &y,
-             std::vector<int> &displacementOfElement, int np,
-             int myId);
+    gatherSolution(std::vector<int> &numOfElement, std::vector<double> &tempSolution, std::vector<double> &solution,
+                   std::vector<int> &displacementOfElement, int np,
+                   int myId);
 
     static void preciseSolution(std::vector<double> &u);
 
     static double
-    Jacobi(std::vector<double> &y, std::vector<double> &y_n, std::vector<int> &el_num, int myId, int np,
+    Jacobi(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &el_num, int myId, int np,
            int &iterations,
            JacobiSolutionMethod methodType);
 
     static double
-    redAndBlackMethod(std::vector<double> &y, std::vector<double> &y_n, std::vector<int> el_num, int myId, int np, int &iterationCount,
+    redAndBlackMethod(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> el_num,
+                      int myId, int np, int &iterationCount,
                       RedAndBlackSolutionMethod methodType);
 };
 
