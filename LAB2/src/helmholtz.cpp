@@ -140,8 +140,8 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
 double Helmholtz::solveMPI(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber, int myId,
                            int np, int &iterationCount,
                            const function<void(vector<double> &solution, vector<double> &tempSolution,
-                                                    vector<int> &elementNumber, int myId,
-                                                    int np, int &shift)> &calc) {
+                                               vector<int> &elementNumber, int myId,
+                                               int np, int &shift)> &calc) {
     double normValue;
     int shift = 0;
     for (int i = 0; i < myId; ++i)
@@ -369,31 +369,37 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
         MPI_Isend(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
     }
 
-    for (int i = 2; i < elementNumber[myId] / N - 2; ++i)
-        for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2)
+    for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
+        for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
             solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
                                     tempSolution[(i + 1) * N + j])) / multiplayer;
+        }
+    }
 
-    if (myId != 0)
+    if (myId != 0) {
         MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
-    if (myId != np - 1)
+    }
+    if (myId != np - 1) {
         MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+    }
 
     int index = 1;
-    for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j)
+    for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j) {
         solution[index * N + j] = (h * h * rightSideFunction((index + shift) * h, j * h) +
                                    (tempSolution[index * N + j - 1] + tempSolution[index * N + j + 1] +
                                     tempSolution[(index - 1) * N + j] +
                                     tempSolution[(index + 1) * N + j])) / multiplayer;
+    }
 
     index = elementNumber[myId] / N - 2;
-    for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j)
+    for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j) {
         solution[index * N + j] = (h * h * rightSideFunction((index + shift) * h, j * h) +
                                    (tempSolution[index * N + j - 1] + tempSolution[index * N + j + 1] +
                                     tempSolution[(index - 1) * N + j] +
                                     tempSolution[(index + 1) * N + j])) / multiplayer;
+    }
 
     if (myId != np - 1) {
         MPI_Isend(solution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
@@ -406,32 +412,37 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
         MPI_Isend(solution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
     }
 
-    for (int i = 2; i < elementNumber[myId] / N - 2; ++i)
-        for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2)
+    for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
+        for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
             solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
                                    (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                     solution[(i - 1) * N + j] +
                                     solution[(i + 1) * N + j])) / multiplayer;
+        }
+    }
 
-
-    if (myId != 0)
+    if (myId != 0) {
         MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
-    if (myId != np - 1)
+    }
+    if (myId != np - 1) {
         MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+    }
 
     int i = 1;
-    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2)
+    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
         solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
                                (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                 solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
                               multiplayer;
+    }
 
     i = elementNumber[myId] / N - 2;
-    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2)
+    for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
         solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
                                (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                 solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
                               multiplayer;
+    }
 }
 
 double Helmholtz::rightSideFunction(double x, double solution) {
@@ -454,12 +465,13 @@ Helmholtz::gatherSolution(vector<int> &numOfElement, vector<double> &tempSolutio
                           vector<int> &displacementOfElement, const int np,
                           const int myId) {
     int size;
-    if ((myId == 0 || myId == np - 1) && np != 1)
+    if ((myId == 0 || myId == np - 1) && np != 1) {
         size = numOfElement[myId] - N;
-    else if (np != 1)
+    } else if (np != 1) {
         size = numOfElement[myId] - 2 * N;
-    else
+    } else {
         size = numOfElement[myId];
+    }
 
     MPI_Gatherv((myId == 0) ? tempSolution.data() : tempSolution.data() + N, size, MPI_DOUBLE, solution.data(),
                 numOfElement.data(),

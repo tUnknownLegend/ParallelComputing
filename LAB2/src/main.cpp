@@ -28,11 +28,13 @@ int main(int argc, char **argv) {
         }
 
         displacementOfElement[0] = 0;
-        for (int i = 1; i < np; ++i)
+        for (int i = 1; i < np; ++i) {
             displacementOfElement[i] = displacementOfElement[i - 1] + elementNumber[i - 1];
+        }
 
-        for (int i = 0; i < np; ++i)
+        for (int i = 0; i < np; ++i){
             elementNumber[i] += 2 * N;
+        }
         elementNumber[0] -= N;
         elementNumber[np - 1] -= N;
     }
@@ -98,9 +100,10 @@ int main(int argc, char **argv) {
             std::cout << "error: " << norm_f << std::endl;
         }
         Helmholtz::gatherSolution(elementNumber, solution, y_gen, displacementOfElement, np, myId);
-        if (myId == 0)
+        if (myId == 0) {
             std::cout << "diff with precise solution: " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl
                       << std::endl;
+        }
         MPI_Barrier(MPI_COMM_WORLD);
 
         solution.resize(elementNumber[myId], 0);
@@ -118,9 +121,10 @@ int main(int argc, char **argv) {
             std::cout << "error: " << norm_f << std::endl;
         }
         Helmholtz::gatherSolution(elementNumber, solution, y_gen, displacementOfElement, np, myId);
-        if (myId == 0)
+        if (myId == 0) {
             std::cout << "diff with precise solution: " << Helmholtz::norm(y_gen, u, 0, N * N) << std::endl
                       << std::endl;
+        }
         MPI_Barrier(MPI_COMM_WORLD);
     }
     MPI_Finalize();
