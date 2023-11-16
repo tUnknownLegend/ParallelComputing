@@ -1,6 +1,7 @@
 #include "jacobi.h"
 #include "const.h"
 #include "shared.h"
+#include <iostream>
 #include <mpi.h>
 
 void JacobiSendRecv(const int myId,

@@ -2,6 +2,7 @@
 #include "const.h"
 #include "shared.h"
 #include <mpi.h>
+#include <iostream>
 
 void redAndBlackSendRecv(int myId,
                     int numOfProcessors) {

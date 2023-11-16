@@ -2,6 +2,7 @@
 #include "const.h"
 #include "shared.h"
 #include <mpi.h>
+#include <iostream>
 
 Helmholtz::Helmholtz(const int inMyId,
                      const int inNumOfProcessors) {
