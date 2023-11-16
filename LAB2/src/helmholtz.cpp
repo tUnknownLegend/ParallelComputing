@@ -23,8 +23,8 @@ double Helmholtz::norm(const vector<double> &firstVector, const vector<double> &
 
 void
 Helmholtz::gatherSolution(vector<int> &numOfElement, vector<double> &y_n, vector<double> &y,
-                    std::vector<int> &displacementOfElement, const int np,
-                    const int myId) {
+                          std::vector<int> &displacementOfElement, const int np,
+                          const int myId) {
     int size;
     if ((myId == 0 || myId == np - 1) && np != 1)
         size = numOfElement[myId] - N;
@@ -76,74 +76,82 @@ Helmholtz::Jacobi(std::vector<double> &y, std::vector<double> &y_n, std::vector<
 
         iterationCount = 0;
         do {
-            if (methodType == JacobiSendReceive) {
-                MPI_Send(y_n.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                         (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
-                MPI_Recv(y_n.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
-                         MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-
-                MPI_Send(y_n.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
-                         MPI_COMM_WORLD);
-                MPI_Recv(y_n.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                         (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-            }
-            if (methodType == JacobiSendAndReceive) {
-                MPI_Sendrecv(y_n.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                             (myId != np - 1) ? myId + 1 : 0, 3, y_n.data(), (myId != 0) ? N : 0, MPI_DOUBLE,
-                             (myId != 0) ? myId - 1 : np - 1, 3, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-
-                MPI_Sendrecv(y_n.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 4,
-                             y_n.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                             (myId != np - 1) ? myId + 1 : 0, 4, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-
-            }
-            MPI_Request req_send_up, req_recv_up, req_send_down, req_recv_down;
-            if (methodType == JacobiISendIReceive) {
-                if (myId != np - 1) {
-                    MPI_Isend(y_n.data() + el_num[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
-                              &req_send_up);
-
-                    MPI_Irecv(y_n.data() + el_num[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD, &req_recv_up);
-                }
-                if (myId != 0) {
-                    MPI_Irecv(y_n.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
-
-                    MPI_Isend(y_n.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
-                }
-            }
-
             ++iterationCount;
+            MPI_Request req_send_up, req_recv_up, req_send_down, req_recv_down;
+            switch (methodType) {
+                case JacobiSendReceive: {
+                    for (int i = 1; i < el_num[myId] / N - 1; ++i)
+                        for (int j = 1; j < N - 1; ++j)
+                            y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                            (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
+                                             y_n[(i + 1) * N + j])) / multiplayer;
 
-            if (methodType == JacobiSendReceive || methodType == JacobiSendAndReceive) {
-                for (int i = 1; i < el_num[myId] / N - 1; ++i)
+                    MPI_Send(y_n.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                             (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
+                    MPI_Recv(y_n.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
+                             MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    MPI_Send(y_n.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
+                             MPI_COMM_WORLD);
+                    MPI_Recv(y_n.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                             (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+                }
+                    break;
+                case JacobiSendAndReceive: {
+                    for (int i = 1; i < el_num[myId] / N - 1; ++i)
+                        for (int j = 1; j < N - 1; ++j)
+                            y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                            (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
+                                             y_n[(i + 1) * N + j])) / multiplayer;
+
+                    MPI_Sendrecv(y_n.data() + el_num[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                                 (myId != np - 1) ? myId + 1 : 0, 3, y_n.data(), (myId != 0) ? N : 0, MPI_DOUBLE,
+                                 (myId != 0) ? myId - 1 : np - 1, 3, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                    MPI_Sendrecv(y_n.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 4,
+                                 y_n.data() + el_num[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+                                 (myId != np - 1) ? myId + 1 : 0, 4, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+
+                }
+                    break;
+                case JacobiISendIReceive: {
+                    if (myId != np - 1) {
+                        MPI_Isend(y_n.data() + el_num[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
+                                  &req_send_up);
+
+                        MPI_Irecv(y_n.data() + el_num[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
+                                  &req_recv_up);
+                    }
+                    if (myId != 0) {
+                        MPI_Irecv(y_n.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
+
+                        MPI_Isend(y_n.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
+                    }
+
+                    for (int i = 2; i < el_num[myId] / N - 2; ++i)
+                        for (int j = 1; j < N - 1; ++j)
+                            y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+                                            (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
+                                             y_n[(i + 1) * N + j])) / multiplayer;
+
+                    if (myId != 0)
+                        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
+                    if (myId != np - 1)
+                        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+
+                    int i = 1;
                     for (int j = 1; j < N - 1; ++j)
                         y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
                                         (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
                                          y_n[(i + 1) * N + j])) / multiplayer;
-            }
-            if (methodType == JacobiISendIReceive) {
-                for (int i = 2; i < el_num[myId] / N - 2; ++i)
+
+                    i = el_num[myId] / N - 2;
                     for (int j = 1; j < N - 1; ++j)
                         y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
                                         (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
                                          y_n[(i + 1) * N + j])) / multiplayer;
-
-                if (myId != 0)
-                    MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
-                if (myId != np - 1)
-                    MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
-
-                int i = 1;
-                for (int j = 1; j < N - 1; ++j)
-                    y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                    (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
-                                     y_n[(i + 1) * N + j])) / multiplayer;
-
-                i = el_num[myId] / N - 2;
-                for (int j = 1; j < N - 1; ++j)
-                    y[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
-                                    (y_n[i * N + j - 1] + y_n[i * N + j + 1] + y_n[(i - 1) * N + j] +
-                                     y_n[(i + 1) * N + j])) / multiplayer;
+                }
+                    break;
             }
 
             norma = norm(y, y_n, (myId == 0) ? 0 : N, (myId == np) ? el_num[myId] : el_num[myId] - N);
