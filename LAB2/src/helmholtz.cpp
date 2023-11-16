@@ -6,6 +6,11 @@
 using std::vector;
 using std::pair;
 using std::pow;
+using std::cerr;
+using std::cout;
+using std::function;
+using std::abs;
+using std::max;
 
 double
 Helmholtz::jacobiMethod(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber, int myId,
@@ -43,22 +48,22 @@ Helmholtz::jacobiMethod(vector<double> &solution, vector<double> &tempSolution, 
                 normValue = solveMPI(solution, tempSolution, elementNumber, myId, np, iterationCount, JacobiISendIRecv);
                 break;
             default:
-                std::cerr << methodType << ". method not implemented\n";
+                cerr << methodType << ". method not implemented\n";
         }
     }
     if (myId == 0) {
         switch (methodType) {
             case JacobiSendReceive:
-                std::cout << methodType << ". JacobiSendRecv\n";
+                cout << methodType << ". JacobiSendRecv\n";
                 break;
             case JacobiSendAndReceive:
-                std::cout << methodType << ". JacobiSendAndRecv\n";
+                cout << methodType << ". JacobiSendAndRecv\n";
                 break;
             case JacobiISendIReceive:
-                std::cout << methodType << ". JacobiISendIRecv\n";
+                cout << methodType << ". JacobiISendIRecv\n";
                 break;
             default:
-                std::cerr << methodType << ". method not implemented\n";
+                cerr << methodType << ". method not implemented\n";
         }
     }
     return normValue;
@@ -111,22 +116,22 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
                                      redAndBlackISendIRecv);
                 break;
             default:
-                std::cerr << "method not implemented";
+                cerr << "method not implemented";
         }
     }
     if (myId == 0) {
         switch (methodType) {
             case RedAndBlackSendReceive:
-                std::cout << methodType << ". redAndBlackMethodSendRecv\n";
+                cout << methodType << ". redAndBlackMethodSendRecv\n";
                 break;
             case RedAndBlackSendAndReceive:
-                std::cout << methodType << ". redAndBlackMethodSendAndRecv\n";
+                cout << methodType << ". redAndBlackMethodSendAndRecv\n";
                 break;
             case RedAndBlackISendIReceive:
-                std::cout << methodType << ". redAndBlackMethodISendIRecv\n";
+                cout << methodType << ". redAndBlackMethodISendIRecv\n";
                 break;
             default:
-                std::cerr << methodType << ". method not implemented\n";
+                cerr << methodType << ". method not implemented\n";
         }
     }
     return normValue;
@@ -134,7 +139,7 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
 
 double Helmholtz::solveMPI(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber, int myId,
                            int np, int &iterationCount,
-                           const std::function<void(vector<double> &solution, vector<double> &tempSolution,
+                           const function<void(vector<double> &solution, vector<double> &tempSolution,
                                                     vector<int> &elementNumber, int myId,
                                                     int np, int &shift)> &calc) {
     double normValue;
@@ -439,14 +444,14 @@ double Helmholtz::norm(const vector<double> &firstVector, const vector<double> &
                        const int endIndex) {
     double normValue = 0.0;
     for (int i = startIndex; i < endIndex; ++i) {
-        normValue = std::max(normValue, std::abs(firstVector[i] - secondVector[i]));
+        normValue = max(normValue, abs(firstVector[i] - secondVector[i]));
     }
     return normValue;
 }
 
 void
 Helmholtz::gatherSolution(vector<int> &numOfElement, vector<double> &tempSolution, vector<double> &solution,
-                          std::vector<int> &displacementOfElement, const int np,
+                          vector<int> &displacementOfElement, const int np,
                           const int myId) {
     int size;
     if ((myId == 0 || myId == np - 1) && np != 1)
@@ -462,10 +467,10 @@ Helmholtz::gatherSolution(vector<int> &numOfElement, vector<double> &tempSolutio
                 MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
 
-void Helmholtz::preciseSolution(std::vector<double> &solution) {
+void Helmholtz::preciseSolution(vector<double> &preciseVectorSolution) {
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
-            solution[i * N + j] = (1 - i * h) * i * h * sin(M_PI * j * h);
+            preciseVectorSolution[i * N + j] = (1 - i * h) * i * h * sin(M_PI * j * h);
         }
     }
 }

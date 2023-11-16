@@ -89,7 +89,7 @@ public:
                    std::vector<int> &displacementOfElement, int np,
                    int myId);
 
-    static void preciseSolution(std::vector<double> &u);
+    static void preciseSolution(std::vector<double> &preciseVectorSolution);
 
     static double
     jacobiMethod(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
