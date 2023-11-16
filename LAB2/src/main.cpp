@@ -17,8 +17,8 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &numOfProcessors);
     MPI_Comm_rank(MPI_COMM_WORLD, &myId);
 
-    JacobiSendRecv(myId, numOfProcessors);
-    JacobiSendAndRecv(myId, numOfProcessors);
+    JacobiSendRecv(myId, numOfProcessors, false);
+    JacobiSendRecv(myId, numOfProcessors, true);
     JacobiISendIRecv(myId, numOfProcessors);
 
     redAndBlackSendRecv(myId, numOfProcessors);

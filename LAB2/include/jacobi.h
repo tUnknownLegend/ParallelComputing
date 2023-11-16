@@ -9,10 +9,7 @@ using std::pair;
 using std::pow;
 
 void JacobiSendRecv(int myId,
-                    int numOfProcessors);
-
-void JacobiSendAndRecv(int myId,
-                       int numOfProcessors);
+                    int numOfProcessors, bool isInOneCall);
 
 void JacobiISendIRecv(int myId,
                       int numOfProcessors);
