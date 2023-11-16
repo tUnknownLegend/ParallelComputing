@@ -19,8 +19,8 @@ include_directories(src include)
 
 file(GLOB SOURCES *.cpp *.h)
 
-set(SOURCES src/main.cpp src/shared.cpp src/jacobi.cpp src/redAndBlack.cpp src/const.cpp)
-set(HEADERS include/shared.h include/jacobi.h include/redAndBlack.h include/const.h)
+set(SOURCES src/main.cpp src/shared.cpp src/jacobi.cpp src/redAndBlack.cpp src/const.cpp src/helmholtz.cpp)
+set(HEADERS include/shared.h include/jacobi.h include/redAndBlack.h include/const.h include/helmholtz.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
