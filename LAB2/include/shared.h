@@ -16,7 +16,7 @@
 // output file for vector
 #define OUT_FILE_VECTOR ADD_DOTS"outputVector.txt"
 // compare for double
-#define COMPARE_RATE 10e-7
+#define COMPARE_RATE 10e-5
 // zero division error
 #define DIVISTION_ERROR 10e-7
 

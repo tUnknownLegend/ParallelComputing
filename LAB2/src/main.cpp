@@ -29,13 +29,89 @@ void elementsDistributionCalc(std::vector<int> &elementNumber, std::vector<int> 
     elementNumber[np - 1] -= N;
 }
 
+enum AllMethodTypes {
+    redBlackNone = -2,
+    jacobiNone = -1,
+    jacobiSendRecv,
+    jacobiSendAndRecv,
+    jacobiISendIRecv,
+    redBlackSendRecv,
+    redBlackSendAndRecv,
+    redBlackISendIRecv,
+};
+
+void
+printAndCalcResults(std::vector<double> &solution, std::vector<double> &tempSolution,
+                    std::vector<double> &resultSolve,
+                    std::vector<double> &preciseVectorSolution,
+                    std::vector<int> &elementNumber, std::vector<int> &displacementOfElement,
+                    const int myId, const int np, int &iterationsCount, const AllMethodTypes method) {
+    solution.resize(elementNumber[myId], 0);
+    std::fill(solution.begin(), solution.end(), 0.0);
+    tempSolution.resize(elementNumber[myId], 0);
+    std::fill(tempSolution.begin(), tempSolution.end(), 0.0);
+
+    const auto startTime = MPI_Wtime();
+
+    switch (method) {
+        case redBlackNone:
+            Helmholtz::redAndBlackMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                         RedAndBlackNone);
+            break;
+        case jacobiNone:
+            Helmholtz::jacobiMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                    JacobiNone);
+            break;
+        case jacobiSendRecv:
+            Helmholtz::jacobiMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                    JacobiSendReceive);
+            break;
+        case jacobiSendAndRecv:
+            Helmholtz::jacobiMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                    JacobiSendAndReceive);
+            break;
+        case jacobiISendIRecv:
+            Helmholtz::jacobiMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                    JacobiISendIReceive);
+            break;
+        case redBlackSendRecv:
+            Helmholtz::redAndBlackMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                         RedAndBlackSendReceive);
+            break;
+        case redBlackSendAndRecv:
+            Helmholtz::redAndBlackMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                         RedAndBlackSendAndReceive);
+            break;
+        case redBlackISendIRecv:
+            Helmholtz::redAndBlackMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
+                                         RedAndBlackISendIReceive);
+            break;
+        default:
+            std::cerr << "method not implemented\n";
+    }
+
+
+    const auto endTime = MPI_Wtime();
+    if (myId == 0) {
+        std::cout << "exec time: " << endTime - startTime << std::endl;
+        std::cout << "iterationsCount: " << iterationsCount << std::endl;
+    }
+    Helmholtz::gatherSolution(elementNumber, solution, resultSolve, displacementOfElement, np, myId);
+    if (myId == 0) {
+        std::cout << "diff with precise solution: " << Helmholtz::norm(resultSolve, preciseVectorSolution, 0, N * N)
+                  << std::endl
+                  << std::endl;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
 int main(int argc, char **argv) {
     int myId, np, iterationsCount;
-    double t1, t2, t3, t4, norm_f;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &np);
     MPI_Comm_rank(MPI_COMM_WORLD, &myId);
-    
+
     std::vector<int> elementNumber(np);
     std::vector<int> displacementOfElement(np);
 
@@ -50,7 +126,7 @@ int main(int argc, char **argv) {
     std::vector<double> tempSolution;
     std::vector<double> resultSolve;
     std::vector<double> preciseVectorSolution;
-    
+
     if (myId == 0) {
         std::cout << "number of processors: " << np << std::endl << std::endl;
         resultSolve.resize(N * N, 0);
@@ -59,85 +135,18 @@ int main(int argc, char **argv) {
     }
 
     if (np == 1) {
-        solution.resize(elementNumber[myId], 0);
-        std::fill(solution.begin(), solution.end(), 0.0);
-        tempSolution.resize(elementNumber[myId], 0);
-        std::fill(tempSolution.begin(), tempSolution.end(), 0.0);
+        printAndCalcResults(solution, tempSolution, resultSolve, preciseVectorSolution, elementNumber,
+                            displacementOfElement, myId, np, iterationsCount, jacobiNone);
 
-        solution.resize(N * N, 0);
-        std::fill(solution.begin(), solution.end(), 0.0);
-        tempSolution.resize(N * N, 0);
-        std::fill(tempSolution.begin(), tempSolution.end(), 0.0);
+        printAndCalcResults(solution, tempSolution, resultSolve, preciseVectorSolution, elementNumber,
+                            displacementOfElement, myId, np, iterationsCount, redBlackNone);
 
-        t1 = MPI_Wtime();
-        norm_f = Helmholtz::jacobiMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount, JacobiNone);
-        t2 = MPI_Wtime();
-        std::cout << std::endl << "jacobiMethod seq: " << std::endl;
-        std::cout << "Time = " << t2 - t1 << std::endl;
-        std::cout << "Iterations = " << iterationsCount << std::endl;
-        std::cout << "Error = " << norm_f << std::endl;
-        std::cout << "|solution - preciseVectorSolution| = "
-                  << Helmholtz::norm(solution, preciseVectorSolution, 0, N * N) << std::endl << std::endl;
-
-        std::fill(solution.begin(), solution.end(), 0.0);
-        std::fill(tempSolution.begin(), tempSolution.end(), 0.0);
-
-        t3 = MPI_Wtime();
-        norm_f = Helmholtz::redAndBlackMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
-                                              RedAndBlackNone);
-        t4 = MPI_Wtime();
-        std::cout << std::endl << "redAndBlackM seq: " << std::endl;
-        std::cout << "Time = " << t4 - t3 << std::endl;
-        std::cout << "Iterations = " << iterationsCount << std::endl;
-        std::cout << "Error = " << norm_f << std::endl;
-        std::cout << "|solution - preciseVectorSolution| = "
-                  << Helmholtz::norm(solution, preciseVectorSolution, 0, N * N) << std::endl << std::endl;
-    }
-    for (int methodType = 0; methodType < 3 && np > 1; ++methodType) {
-        solution.resize(elementNumber[myId], 0);
-        std::fill(solution.begin(), solution.end(), 0.0);
-        tempSolution.resize(elementNumber[myId], 0);
-        std::fill(tempSolution.begin(), tempSolution.end(), 0.0);
-
-        t1 = MPI_Wtime();
-        norm_f = Helmholtz::jacobiMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
-                                         static_cast<JacobiSolutionMethod>(methodType));
-        t2 = MPI_Wtime();
-        if (myId == 0) {
-            std::cout << "exec time: " << t2 - t1 << std::endl;
-            std::cout << "iterationsCount: " << iterationsCount << std::endl;
-            std::cout << "error: " << norm_f << std::endl;
+    } else {
+        for (int methodType = 0; methodType < 6 && np > 1; ++methodType) {
+            printAndCalcResults(solution, tempSolution, resultSolve, preciseVectorSolution, elementNumber,
+                                displacementOfElement, myId, np, iterationsCount,
+                                static_cast<const AllMethodTypes>(methodType));
         }
-        Helmholtz::gatherSolution(elementNumber, solution, resultSolve, displacementOfElement, np, myId);
-        if (myId == 0) {
-            std::cout << "diff with precise solution: " << Helmholtz::norm(resultSolve, preciseVectorSolution, 0, N * N)
-                      << std::endl
-                      << std::endl;
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        solution.resize(elementNumber[myId], 0);
-        std::fill(solution.begin(), solution.end(), 0.0);
-        tempSolution.resize(elementNumber[myId], 0);
-        std::fill(tempSolution.begin(), tempSolution.end(), 0.0);
-
-        t1 = MPI_Wtime();
-        norm_f = Helmholtz::redAndBlackMethod(solution, tempSolution, elementNumber, myId, np, iterationsCount,
-                                              static_cast<RedAndBlackSolutionMethod>(methodType));
-        t2 = MPI_Wtime();
-        if (myId == 0) {
-            std::cout << "exec time: " << t2 - t1 << std::endl;
-            std::cout << "iterationsCount: " << iterationsCount << std::endl;
-            std::cout << "error: " << norm_f << std::endl;
-        }
-        Helmholtz::gatherSolution(elementNumber, solution, resultSolve, displacementOfElement, np, myId);
-        if (myId == 0) {
-            std::cout << "diff with precise solution: " << Helmholtz::norm(resultSolve, preciseVectorSolution, 0, N * N)
-                      << std::endl
-                      << std::endl;
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
     }
     MPI_Finalize();
 }

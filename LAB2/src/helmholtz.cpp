@@ -19,7 +19,6 @@ Helmholtz::jacobiMethod(vector<double> &solution, vector<double> &tempSolution, 
                         const JacobiSolutionMethod methodType) {
     double normValue = 0;
     if (np == 1) {
-
         iterationCount = 0;
         do {
             ++iterationCount;
@@ -53,6 +52,9 @@ Helmholtz::jacobiMethod(vector<double> &solution, vector<double> &tempSolution, 
     }
     if (myId == 0) {
         switch (methodType) {
+            case JacobiNone:
+                cout << methodType << ". JacobiNone\n";
+                break;
             case JacobiSendReceive:
                 cout << methodType << ". JacobiSendRecv\n";
                 break;
@@ -121,6 +123,9 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
     }
     if (myId == 0) {
         switch (methodType) {
+            case RedAndBlackNone:
+                cout << methodType << ". RedAndBlackNone\n";
+                break;
             case RedAndBlackSendReceive:
                 cout << methodType << ". redAndBlackMethodSendRecv\n";
                 break;
