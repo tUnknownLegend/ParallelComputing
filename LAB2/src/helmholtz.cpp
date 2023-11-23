@@ -24,10 +24,10 @@ Helmholtz::jacobiMethod(vector<double> &solution, vector<double> &tempSolution, 
             ++iterationCount;
             for (int i = 1; i < N - 1; ++i) {
                 for (int j = 1; j < N - 1; ++j) {
-                    solution[i * N + j] = (h * h * rightSideFunction(i * h, j * h) +
+                    solution[i * N + j] = (sqrH * rightSideFunction(i * h, j * h) +
                                            (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                             tempSolution[(i - 1) * N + j] +
-                                            tempSolution[(i + 1) * N + j])) / multiplayer;
+                                            tempSolution[(i + 1) * N + j])) / multiplier;
                 }
             }
             normValue = norm(solution, tempSolution, 0, N * N);
@@ -85,19 +85,19 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
             ++iterationCount;
             for (int i = 1; i < N - 1; ++i) {
                 for (int j = (i % 2) + 1; j < N - 1; j += 2) {
-                    solution[i * N + j] = (h * h * rightSideFunction(i * h, j * h) +
+                    solution[i * N + j] = (sqrH * rightSideFunction(i * h, j * h) +
                                            (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                             tempSolution[(i - 1) * N + j] +
-                                            tempSolution[(i + 1) * N + j])) / multiplayer;
+                                            tempSolution[(i + 1) * N + j])) / multiplier;
                 }
             }
 
             for (int i = 1; i < N - 1; ++i) {
                 for (int j = ((i + 1) % 2) + 1; j < N - 1; j += 2) {
-                    solution[i * N + j] = (h * h * rightSideFunction(i * h, j * h) +
+                    solution[i * N + j] = (sqrH * rightSideFunction(i * h, j * h) +
                                            (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                             solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
-                                          multiplayer;
+                                          multiplier;
                 }
             }
             normValue = norm(solution, tempSolution, 0, N * N);
@@ -249,10 +249,10 @@ Helmholtz::JacobiSendRecv(vector<double> &solution, vector<double> &tempSolution
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = 1; j < N - 1; ++j) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
-                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                                    tempSolution[(i + 1) * N + j])) / multiplier;
         }
     }
 };
@@ -273,10 +273,10 @@ Helmholtz::JacobiSendAndRecv(vector<double> &solution, vector<double> &tempSolut
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = 1; j < N - 1; ++j) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
-                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                                    tempSolution[(i + 1) * N + j])) / multiplier;
         }
     }
 }
@@ -297,10 +297,10 @@ Helmholtz::JacobiISendIRecv(vector<double> &solution, vector<double> &tempSoluti
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
         for (int j = 1; j < N - 1; ++j) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
-                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                                    tempSolution[(i + 1) * N + j])) / multiplier;
         }
     }
 
@@ -315,18 +315,18 @@ Helmholtz::JacobiISendIRecv(vector<double> &solution, vector<double> &tempSoluti
 
     int i = 1;
     for (int j = 1; j < N - 1; ++j) {
-        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+        solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                 tempSolution[(i - 1) * N + j] +
-                                tempSolution[(i + 1) * N + j])) / multiplayer;
+                                tempSolution[(i + 1) * N + j])) / multiplier;
     }
 
     i = elementNumber[myId] / N - 2;
     for (int j = 1; j < N - 1; ++j) {
-        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+        solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                 tempSolution[(i - 1) * N + j] +
-                                tempSolution[(i + 1) * N + j])) / multiplayer;
+                                tempSolution[(i + 1) * N + j])) / multiplier;
     }
 }
 
@@ -347,10 +347,10 @@ Helmholtz::redAndBlackSendRecv(vector<double> &solution, vector<double> &tempSol
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
-                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                                    tempSolution[(i + 1) * N + j])) / multiplier;
         }
     }
 
@@ -367,10 +367,10 @@ Helmholtz::redAndBlackSendRecv(vector<double> &solution, vector<double> &tempSol
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                     solution[(i - 1) * N + j] +
-                                    solution[(i + 1) * N + j])) / multiplayer;
+                                    solution[(i + 1) * N + j])) / multiplier;
         }
     }
 }
@@ -392,10 +392,10 @@ Helmholtz::redAndBlackSendAndRecv(vector<double> &solution, vector<double> &temp
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
-                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                                    tempSolution[(i + 1) * N + j])) / multiplier;
         }
     }
 
@@ -410,10 +410,10 @@ Helmholtz::redAndBlackSendAndRecv(vector<double> &solution, vector<double> &temp
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                     solution[(i - 1) * N + j] +
-                                    solution[(i + 1) * N + j])) / multiplayer;
+                                    solution[(i + 1) * N + j])) / multiplier;
         }
     }
 }
@@ -435,10 +435,10 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
         for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (tempSolution[i * N + j - 1] + tempSolution[i * N + j + 1] +
                                     tempSolution[(i - 1) * N + j] +
-                                    tempSolution[(i + 1) * N + j])) / multiplayer;
+                                    tempSolution[(i + 1) * N + j])) / multiplier;
         }
     }
 
@@ -453,18 +453,18 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
 
     int index = 1;
     for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j) {
-        solution[index * N + j] = (h * h * rightSideFunction((index + shift) * h, j * h) +
+        solution[index * N + j] = (sqrH * rightSideFunction((index + shift) * h, j * h) +
                                    (tempSolution[index * N + j - 1] + tempSolution[index * N + j + 1] +
                                     tempSolution[(index - 1) * N + j] +
-                                    tempSolution[(index + 1) * N + j])) / multiplayer;
+                                    tempSolution[(index + 1) * N + j])) / multiplier;
     }
 
     index = elementNumber[myId] / N - 2;
     for (int j = ((index + shift) % 2) + 1; j < N - 1; ++j) {
-        solution[index * N + j] = (h * h * rightSideFunction((index + shift) * h, j * h) +
+        solution[index * N + j] = (sqrH * rightSideFunction((index + shift) * h, j * h) +
                                    (tempSolution[index * N + j - 1] + tempSolution[index * N + j + 1] +
                                     tempSolution[(index - 1) * N + j] +
-                                    tempSolution[(index + 1) * N + j])) / multiplayer;
+                                    tempSolution[(index + 1) * N + j])) / multiplier;
     }
 
     if (myId != np - 1) {
@@ -478,10 +478,10 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
         for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-            solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+            solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                    (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                     solution[(i - 1) * N + j] +
-                                    solution[(i + 1) * N + j])) / multiplayer;
+                                    solution[(i + 1) * N + j])) / multiplier;
         }
     }
 
@@ -496,18 +496,18 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
 
     int i = 1;
     for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+        solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                 solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
-                              multiplayer;
+                              multiplier;
     }
 
     i = elementNumber[myId] / N - 2;
     for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
-        solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
+        solution[i * N + j] = (sqrH * rightSideFunction((i + shift) * h, j * h) +
                                (solution[i * N + j - 1] + solution[i * N + j + 1] +
                                 solution[(i - 1) * N + j] + solution[(i + 1) * N + j])) /
-                              multiplayer;
+                              multiplier;
     }
 }
 

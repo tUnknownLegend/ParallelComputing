@@ -29,11 +29,13 @@ const std::vector<std::pair<double, double>> region = {
 const double h = 0.1;
 const double k = 0.1;
 
+const double sqrH = pow(h, 2);
+
 const std::pair<int, int> sizeOfTask = {(region[0].second - region[0].first) / h + 1,
                                         (region[1].second - region[1].first) / k + 1};
 
 const int N = sizeOfTask.first;
-const double multiplayer = (4.0 + pow(k, 2) * pow(h, 2));
+const double multiplier = (4.0 + pow(k, 2) * pow(h, 2));
 
 
 class Helmholtz {
