@@ -5,6 +5,7 @@
 #include <cmath>
 #include <string>
 #include <functional>
+#include <mpi.h>
 
 enum JacobiSolutionMethod {
     JacobiSendReceive,
@@ -50,7 +51,8 @@ private:
     static inline void
     JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                      int myId,
-                     int np, int &shift);
+                     int np, int &shift, MPI_Request *req_send_up, MPI_Request *req_recv_up,
+                     MPI_Request *req_send_down, MPI_Request *req_recv_down, int iterationCount);
 
     static inline void
     redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
@@ -67,7 +69,8 @@ private:
     redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                           std::vector<int> &elementNumber,
                           int myId,
-                          int np, int &shift);
+                          int np, int &shift, MPI_Request *req_send_up, MPI_Request *req_recv_up,
+                          MPI_Request *req_send_down, MPI_Request *req_recv_down);
 
     static double
     solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
@@ -75,7 +78,9 @@ private:
              int np, int &iterationCount,
              const std::function<void(std::vector<double> &solution, std::vector<double> &tempSolution,
                                       std::vector<int> &elementNumber, int myId,
-                                      int np, int &shift)> &calc);
+                                      int np, int &shift)> &calc,
+             JacobiSolutionMethod jacobiMethodType = JacobiNone,
+             RedAndBlackSolutionMethod redAndBlackMethodType = RedAndBlackNone);
 
     static double rightSideFunction(double x, double solution);
 

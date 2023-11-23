@@ -44,7 +44,8 @@ Helmholtz::jacobiMethod(vector<double> &solution, vector<double> &tempSolution, 
                                      JacobiSendAndRecv);
                 break;
             case JacobiISendIReceive:
-                normValue = solveMPI(solution, tempSolution, elementNumber, myId, np, iterationCount, JacobiISendIRecv);
+                normValue = solveMPI(solution, tempSolution, elementNumber, myId, np, iterationCount, JacobiSendRecv,
+                                     JacobiISendIReceive, RedAndBlackNone);
                 break;
             default:
                 cerr << methodType << ". method not implemented\n";
@@ -115,7 +116,7 @@ Helmholtz::redAndBlackMethod(vector<double> &solution, vector<double> &tempSolut
                 break;
             case RedAndBlackISendIReceive:
                 normValue = solveMPI(solution, tempSolution, elementNumber, myId, np, iterationCount,
-                                     redAndBlackISendIRecv);
+                                     redAndBlackSendRecv, JacobiNone, RedAndBlackISendIReceive);
                 break;
             default:
                 cerr << "method not implemented";
@@ -146,7 +147,9 @@ double Helmholtz::solveMPI(vector<double> &solution, vector<double> &tempSolutio
                            int np, int &iterationCount,
                            const function<void(vector<double> &solution, vector<double> &tempSolution,
                                                vector<int> &elementNumber, int myId,
-                                               int np, int &shift)> &calc) {
+                                               int np, int &shift)> &calc,
+                           const JacobiSolutionMethod jacobiMethodType,
+                           const RedAndBlackSolutionMethod redAndBlackMethodType) {
     double normValue;
     int shift = 0;
     for (int i = 0; i < myId; ++i)
@@ -156,16 +159,84 @@ double Helmholtz::solveMPI(vector<double> &solution, vector<double> &tempSolutio
     iterationCount = 0;
     double norma;
 
-    do {
-        ++iterationCount;
+    if (jacobiMethodType == JacobiISendIReceive || redAndBlackMethodType == RedAndBlackISendIReceive) {
+        auto req_send_up = new MPI_Request[2];
+        auto req_recv_up = new MPI_Request[2];
+        auto req_send_down = new MPI_Request[2];
+        auto req_recv_down = new MPI_Request[2];
 
-        calc(solution, tempSolution, elementNumber, myId, np, shift);
+        vector<double> localTop(N, 0.0), localBottom(N, 0.0);
 
-        norma = norm(solution, tempSolution, (myId == 0) ? 0 : N,
-                     (myId == np) ? elementNumber[myId] : elementNumber[myId] - N);
-        MPI_Allreduce(&norma, &normValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        tempSolution.swap(solution);
-    } while (normValue > COMPARE_RATE);
+        if (myId != np - 1) {
+            MPI_Send_init(tempSolution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5,
+                      MPI_COMM_WORLD,
+                      req_send_up);
+
+            MPI_Recv_init(tempSolution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
+                      req_recv_up);
+
+            MPI_Send_init(solution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 6,
+                          MPI_COMM_WORLD,
+                          req_send_up + 1);
+
+            MPI_Recv_init(solution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
+                          req_recv_up + 1);
+        }
+        if (myId != 0) {
+            MPI_Recv_init(tempSolution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, req_recv_down);
+
+            MPI_Send_init(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, req_send_down);
+
+            MPI_Recv_init(solution.data(), N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, req_recv_down + 1);
+
+            MPI_Send_init(solution.data() + N, N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, req_send_down + 1);
+        }
+
+        if (jacobiMethodType == JacobiISendIReceive) {
+            do {
+                ++iterationCount;
+
+                JacobiISendIRecv(solution, tempSolution, elementNumber, myId, np, shift, req_send_up, req_recv_up,
+                                 req_send_down, req_recv_down, iterationCount);
+
+                norma = norm(solution, tempSolution, (myId == 0) ? 0 : N,
+                             (myId == np) ? elementNumber[myId] : elementNumber[myId] - N);
+
+                MPI_Allreduce(&norma, &normValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                tempSolution.swap(solution);
+            } while (normValue > COMPARE_RATE);
+        } else {
+            do {
+                ++iterationCount;
+
+//                redAndBlackISendIRecv(solution, tempSolution, elementNumber, myId, np, shift, req_send_up, req_recv_up,
+//                                      req_send_down, req_recv_down);
+
+                norma = norm(solution, tempSolution, (myId == 0) ? 0 : N,
+                             (myId == np) ? elementNumber[myId] : elementNumber[myId] - N);
+                MPI_Allreduce(&norma, &normValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                tempSolution.swap(solution);
+
+                std::cout << normValue << " " << norma << "\n";
+
+            } while (normValue > COMPARE_RATE);
+        }
+        delete[] req_send_up;
+        delete[] req_send_down;
+        delete[] req_recv_up;
+        delete[] req_recv_down;
+    } else {
+        do {
+            ++iterationCount;
+
+            calc(solution, tempSolution, elementNumber, myId, np, shift);
+
+            norma = norm(solution, tempSolution, (myId == 0) ? 0 : N,
+                         (myId == np) ? elementNumber[myId] : elementNumber[myId] - N);
+            MPI_Allreduce(&norma, &normValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            tempSolution.swap(solution);
+        } while (normValue > COMPARE_RATE);
+    }
 
     return normValue;
 }
@@ -221,20 +292,15 @@ Helmholtz::JacobiSendAndRecv(vector<double> &solution, vector<double> &tempSolut
 inline void
 Helmholtz::JacobiISendIRecv(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber,
                             int myId,
-                            int np, int &shift) {
-    MPI_Request req_send_up, req_recv_up, req_send_down, req_recv_down;
+                            int np, int &shift, MPI_Request *req_send_up, MPI_Request *req_recv_up,
+                            MPI_Request *req_send_down, MPI_Request *req_recv_down, const int iterationCount) {
     if (myId != np - 1) {
-        MPI_Isend(tempSolution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5,
-                  MPI_COMM_WORLD,
-                  &req_send_up);
-
-        MPI_Irecv(tempSolution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
-                  &req_recv_up);
+        MPI_Startall(2, req_send_up);
+        MPI_Startall(2, req_recv_up);
     }
     if (myId != 0) {
-        MPI_Irecv(tempSolution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
-
-        MPI_Isend(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
+        MPI_Startall(2, req_send_down);
+        MPI_Startall(2, req_recv_down);
     }
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
@@ -245,12 +311,16 @@ Helmholtz::JacobiISendIRecv(vector<double> &solution, vector<double> &tempSoluti
                                     tempSolution[(i + 1) * N + j])) / multiplayer;
         }
     }
-    if (myId != 0) {
-        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
-    }
+
     if (myId != np - 1) {
-        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+        MPI_Waitall(2, req_send_up, MPI_STATUSES_IGNORE);
+        MPI_Waitall(2, req_recv_up, MPI_STATUSES_IGNORE);
     }
+    if (myId != 0) {
+        MPI_Waitall(2, req_send_down, MPI_STATUSES_IGNORE);
+        MPI_Waitall(2, req_recv_down, MPI_STATUSES_IGNORE);
+    }
+
     int i = 1;
     for (int j = 1; j < N - 1; ++j) {
         solution[i * N + j] = (h * h * rightSideFunction((i + shift) * h, j * h) +
@@ -359,19 +429,19 @@ Helmholtz::redAndBlackSendAndRecv(vector<double> &solution, vector<double> &temp
 void
 Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber,
                                  const int myId,
-                                 const int np, int &shift) {
-    MPI_Request req_send_up, req_recv_up, req_send_down, req_recv_down;
+                                 const int np, int &shift, MPI_Request *req_send_up, MPI_Request *req_recv_up,
+                                 MPI_Request *req_send_down, MPI_Request *req_recv_down) {
 
     if (myId != np - 1) {
-        MPI_Isend(tempSolution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5,
-                  MPI_COMM_WORLD,
-                  &req_send_up);
-        MPI_Irecv(tempSolution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
-                  &req_recv_up);
+//        MPI_Isend(tempSolution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5,
+//                  MPI_COMM_WORLD,
+//                  &req_send_up);
+//        MPI_Irecv(tempSolution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
+//                  &req_recv_up);
     }
     if (myId != 0) {
-        MPI_Irecv(tempSolution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
-        MPI_Isend(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
+//        MPI_Irecv(tempSolution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
+//        MPI_Isend(tempSolution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
     }
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
@@ -384,10 +454,10 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
     }
 
     if (myId != 0) {
-        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
+//        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
     }
     if (myId != np - 1) {
-        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+//        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
     }
 
     int index = 1;
@@ -407,14 +477,14 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
     }
 
     if (myId != np - 1) {
-        MPI_Isend(solution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
-                  &req_send_up);
-        MPI_Irecv(solution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
-                  &req_recv_up);
+//        MPI_Isend(solution.data() + elementNumber[myId] - 2 * N, N, MPI_DOUBLE, myId + 1, 5, MPI_COMM_WORLD,
+//                  &req_send_up);
+//        MPI_Irecv(solution.data() + elementNumber[myId] - N, N, MPI_DOUBLE, myId + 1, 6, MPI_COMM_WORLD,
+//                  &req_recv_up);
     }
     if (myId != 0) {
-        MPI_Irecv(solution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
-        MPI_Isend(solution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
+//        MPI_Irecv(solution.data(), N, MPI_DOUBLE, myId - 1, 5, MPI_COMM_WORLD, &req_recv_down);
+//        MPI_Isend(solution.data() + N, N, MPI_DOUBLE, myId - 1, 6, MPI_COMM_WORLD, &req_send_down);
     }
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
@@ -427,10 +497,10 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
     }
 
     if (myId != 0) {
-        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
+//        MPI_Wait(&req_recv_down, MPI_STATUSES_IGNORE);
     }
     if (myId != np - 1) {
-        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
+//        MPI_Wait(&req_recv_up, MPI_STATUSES_IGNORE);
     }
 
     int i = 1;
