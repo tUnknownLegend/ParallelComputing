@@ -51,8 +51,8 @@ private:
     static inline void
     JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                      int myId,
-                     int np, int &shift, MPI_Request *req_send_up, MPI_Request *req_recv_up,
-                     MPI_Request *req_send_down, MPI_Request *req_recv_down);
+                     int np, int &shift, MPI_Request *reqSendUp, MPI_Request *reqRecvUp,
+                     MPI_Request *reqSendDown, MPI_Request *reqRecvDown);
 
     static inline void
     redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
@@ -69,8 +69,8 @@ private:
     redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                           std::vector<int> &elementNumber,
                           int myId,
-                          int np, int &shift, MPI_Request *req_send_up, MPI_Request *req_recv_up,
-                          MPI_Request *req_send_down, MPI_Request *req_recv_down);
+                          int np, int &shift, MPI_Request *reqSendUp, MPI_Request *reqRecvUp,
+                          MPI_Request *reqSendDown, MPI_Request *reqRecvDown);
 
     static double
     solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
