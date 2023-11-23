@@ -236,8 +236,7 @@ double Helmholtz::solveMPI(vector<double> &solution, vector<double> &tempSolutio
 inline void
 Helmholtz::JacobiSendRecv(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber, int myId,
                           int np, int &shift) {
-
-    for (int i = 1; i < N; ++i) {
+    for (int i = 0; i < N; ++i) {
         MPI_Send(tempSolution.data() + elementNumber[myId] - 2 * N + i, (myId != np - 1) ? 1 : 0, MPI_DOUBLE,
                  (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
         MPI_Recv(tempSolution.data() + i, (myId != 0) ? 1 : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
@@ -337,16 +336,18 @@ void
 Helmholtz::redAndBlackSendRecv(vector<double> &solution, vector<double> &tempSolution, vector<int> &elementNumber,
                                const int myId,
                                int np, int &shift) {
-    MPI_Send(tempSolution.data() + elementNumber[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-             (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
-    MPI_Recv(tempSolution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
-             MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+    for (int i = 0; i < N; ++i) {
+        MPI_Send(tempSolution.data() + elementNumber[myId] - 2 * N + i, (myId != np - 1) ? 1 : 0, MPI_DOUBLE,
+                 (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
+        MPI_Recv(tempSolution.data() + i, (myId != 0) ? 1 : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
+                 MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
 
-    MPI_Send(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1,
-             2,
-             MPI_COMM_WORLD);
-    MPI_Recv(tempSolution.data() + elementNumber[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-             (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+        MPI_Send(tempSolution.data() + N + i, (myId != 0) ? 1 : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1,
+                 2,
+                 MPI_COMM_WORLD);
+        MPI_Recv(tempSolution.data() + elementNumber[myId] - N + i, (myId != np - 1) ? 1 : 0, MPI_DOUBLE,
+                 (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+    }
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = ((i + shift) % 2) + 1; j < N - 1; j += 2) {
@@ -357,16 +358,19 @@ Helmholtz::redAndBlackSendRecv(vector<double> &solution, vector<double> &tempSol
         }
     }
 
-    MPI_Send(solution.data() + elementNumber[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-             (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
-    MPI_Recv(solution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
-             MPI_COMM_WORLD,
-             MPI_STATUSES_IGNORE);
+    for (int i = 0; i < N; ++i) {
 
-    MPI_Send(solution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
-             MPI_COMM_WORLD);
-    MPI_Recv(solution.data() + elementNumber[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-             (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+        MPI_Send(solution.data() + elementNumber[myId] - 2 * N + i, (myId != np - 1) ? 1 : 0, MPI_DOUBLE,
+                 (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
+        MPI_Recv(solution.data() + i, (myId != 0) ? 1 : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
+                 MPI_COMM_WORLD,
+                 MPI_STATUSES_IGNORE);
+
+        MPI_Send(solution.data() + N + i, (myId != 0) ? 1 : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
+                 MPI_COMM_WORLD);
+        MPI_Recv(solution.data() + elementNumber[myId] - N + i, (myId != np - 1) ? 1 : 0, MPI_DOUBLE,
+                 (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+    }
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
