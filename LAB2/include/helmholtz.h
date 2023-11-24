@@ -43,12 +43,12 @@ private:
     static inline void
     JacobiSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                    int myId,
-                   int np, int &shift);
+                   int np, int &shift, int iterationsCount);
 
     static inline void
     JacobiSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                       int myId,
-                      int np, int &shift);
+                      int np, int &shift, int iterationsCount);
 
     static inline void
     JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
@@ -59,13 +59,13 @@ private:
     static inline void
     redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                         std::vector<int> &elementNumber, int myId,
-                        int np, int &shift);
+                        int np, int &shift, int iterationsCount);
 
     static inline void
     redAndBlackSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                            std::vector<int> &elementNumber,
                            int myId,
-                           int np, int &shift);
+                           int np, int &shift, int iterationsCount);
 
     static inline void
     redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
@@ -80,7 +80,7 @@ private:
              int np, int &iterationCount,
              const std::function<void(std::vector<double> &solution, std::vector<double> &tempSolution,
                                       std::vector<int> &elementNumber, int myId,
-                                      int np, int &shift)> &calc,
+                                      int np, int &shift, int iterationsCount)> &calc,
              JacobiSolutionMethod jacobiMethodType = JacobiNone,
              RedAndBlackSolutionMethod redAndBlackMethodType = RedAndBlackNone);
 
