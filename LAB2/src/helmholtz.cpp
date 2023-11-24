@@ -452,12 +452,22 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
                                  MPI_Request *const reqSendDown, MPI_Request *const reqRecvDown, const int iterationsCount) {
 
     if (myId != np - 1) {
-        MPI_Startall(2, reqSendUp);
-        MPI_Startall(2, reqRecvUp);
+        if (iterationsCount % 2 != 0) {
+            MPI_Startall(1, &reqSendUp[0]);
+            MPI_Startall(1, &reqRecvUp[0]);
+        } else {
+            MPI_Startall(1, &reqSendUp[1]);
+            MPI_Startall(1, &reqRecvUp[1]);
+        }
     }
     if (myId != 0) {
-        MPI_Startall(2, reqSendDown);
-        MPI_Startall(2, reqRecvDown);
+        if (iterationsCount % 2 != 0) {
+            MPI_Startall(1, &reqSendDown[0]);
+            MPI_Startall(1, &reqRecvDown[0]);
+        } else {
+            MPI_Startall(1, &reqSendDown[1]);
+            MPI_Startall(1, &reqRecvDown[1]);
+        }
     }
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
@@ -470,12 +480,22 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
     }
 
     if (myId != np - 1) {
-        MPI_Waitall(2, reqSendUp, MPI_STATUSES_IGNORE);
-        MPI_Waitall(2, reqRecvUp, MPI_STATUSES_IGNORE);
+        if (iterationsCount % 2 != 0) {
+            MPI_Waitall(1, &reqSendUp[0], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvUp[0], MPI_STATUSES_IGNORE);
+        } else {
+            MPI_Waitall(1, &reqSendUp[1], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvUp[1], MPI_STATUSES_IGNORE);
+        }
     }
     if (myId != 0) {
-        MPI_Waitall(2, reqSendDown, MPI_STATUSES_IGNORE);
-        MPI_Waitall(2, reqRecvDown, MPI_STATUSES_IGNORE);
+        if (iterationsCount % 2 != 0) {
+            MPI_Waitall(1, &reqSendDown[0], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvDown[0], MPI_STATUSES_IGNORE);
+        } else {
+            MPI_Waitall(1, &reqSendDown[1], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvDown[1], MPI_STATUSES_IGNORE);
+        }
     }
 
     int index = 1;
@@ -495,12 +515,22 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
     }
 
     if (myId != np - 1) {
-        MPI_Startall(2, reqSendUp);
-        MPI_Startall(2, reqRecvUp);
+        if (iterationsCount % 2 == 0) {
+            MPI_Startall(1, &reqSendUp[0]);
+            MPI_Startall(1, &reqRecvUp[0]);
+        } else {
+            MPI_Startall(1, &reqSendUp[1]);
+            MPI_Startall(1, &reqRecvUp[1]);
+        }
     }
     if (myId != 0) {
-        MPI_Startall(2, reqSendDown);
-        MPI_Startall(2, reqRecvDown);
+        if (iterationsCount % 2 == 0) {
+            MPI_Startall(1, &reqSendDown[0]);
+            MPI_Startall(1, &reqRecvDown[0]);
+        } else {
+            MPI_Startall(1, &reqSendDown[1]);
+            MPI_Startall(1, &reqRecvDown[1]);
+        }
     }
 
     for (int i = 2; i < elementNumber[myId] / N - 2; ++i) {
@@ -513,12 +543,22 @@ Helmholtz::redAndBlackISendIRecv(vector<double> &solution, vector<double> &tempS
     }
 
     if (myId != np - 1) {
-        MPI_Waitall(2, reqSendUp, MPI_STATUSES_IGNORE);
-        MPI_Waitall(2, reqRecvUp, MPI_STATUSES_IGNORE);
+        if (iterationsCount % 2 == 0) {
+            MPI_Waitall(1, &reqSendUp[0], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvUp[0], MPI_STATUSES_IGNORE);
+        } else {
+            MPI_Waitall(1, &reqSendUp[1], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvUp[1], MPI_STATUSES_IGNORE);
+        }
     }
     if (myId != 0) {
-        MPI_Waitall(2, reqSendDown, MPI_STATUSES_IGNORE);
-        MPI_Waitall(2, reqRecvDown, MPI_STATUSES_IGNORE);
+        if (iterationsCount % 2 == 0) {
+            MPI_Waitall(1, &reqSendDown[0], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvDown[0], MPI_STATUSES_IGNORE);
+        } else {
+            MPI_Waitall(1, &reqSendDown[1], MPI_STATUSES_IGNORE);
+            MPI_Waitall(1, &reqRecvDown[1], MPI_STATUSES_IGNORE);
+        }
     }
 
     int i = 1;
