@@ -388,35 +388,34 @@ Helmholtz::redAndBlackSendRecv(vector<double> &solution, vector<double> &tempSol
         }
     }
 
-//    MPI_Send(solution.data() + elementNumber[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-//             (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
-//    MPI_Recv(solution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
-//             MPI_COMM_WORLD,
-//             MPI_STATUSES_IGNORE);
+//    for (int id = 0; id < np - 1; ++id) {
+//        if (myId == id) {
+//            MPI_Send(tempSolution.data() + elementNumber[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+//                     (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
 //
-//    MPI_Send(solution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
-//             MPI_COMM_WORLD);
-//    MPI_Recv(solution.data() + elementNumber[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-//             (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+//            MPI_Recv(tempSolution.data() + elementNumber[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+//                     (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+//        }
+//        if (myId == id + 1) {
+//            MPI_Recv(tempSolution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
+//                     MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+//
+//            MPI_Send(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1,
+//                     2,
+//                     MPI_COMM_WORLD);
+//        }
+//    }
 
+    MPI_Send(solution.data() + elementNumber[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+             (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
+    MPI_Recv(solution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
+             MPI_COMM_WORLD,
+             MPI_STATUSES_IGNORE);
 
-    for (int id = 0; id < np - 1; ++id) {
-        if (myId == id) {
-            MPI_Send(tempSolution.data() + elementNumber[myId] - 2 * N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                     (myId != np - 1) ? myId + 1 : 0, 1, MPI_COMM_WORLD);
-
-            MPI_Recv(tempSolution.data() + elementNumber[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
-                     (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-        }
-        if (myId == id + 1) {
-            MPI_Recv(tempSolution.data(), (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 1,
-                     MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-
-            MPI_Send(tempSolution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1,
-                     2,
-                     MPI_COMM_WORLD);
-        }
-    }
+    MPI_Send(solution.data() + N, (myId != 0) ? N : 0, MPI_DOUBLE, (myId != 0) ? myId - 1 : np - 1, 2,
+             MPI_COMM_WORLD);
+    MPI_Recv(solution.data() + elementNumber[myId] - N, (myId != np - 1) ? N : 0, MPI_DOUBLE,
+             (myId != np - 1) ? myId + 1 : 0, 2, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
 
     for (int i = 1; i < elementNumber[myId] / N - 1; ++i) {
         for (int j = (((i + shift) + 1) % 2) + 1; j < N - 1; j += 2) {
