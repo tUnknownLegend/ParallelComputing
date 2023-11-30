@@ -12,7 +12,7 @@ const double tEnd = 20.0; // Конечный момент времени
 const int Nt = round(tEnd / tau);       // Количество шагов по времени
 const int tf = round(timeStep / tau); // Коэффициент пропорциональности шагов
 
-const std::pair<double, double> weightRange{1e+10, 1e+10};
+const std::pair<double, double> weightRange{1e+9, 1e+10};
 const std::pair<double, double> positionRange{-1.0, 1.0};
 const std::pair<double, double> velocityRange{-1.0, 1.0};
 

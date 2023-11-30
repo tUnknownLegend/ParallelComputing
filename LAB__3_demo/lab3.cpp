@@ -76,7 +76,7 @@ void read_file(const std::string& file_name, Body* data, size_t& N)
 }
 
 int main(int argc, char** argv) {
-	size_t N = 4; // Количество тел
+	size_t N = 10000; // Количество тел
 
 	int num = 4; // Номер разбиения
 
@@ -88,8 +88,8 @@ int main(int argc, char** argv) {
 	size_t Nt = round(tEnd / tau);       // Количество шагов по времени
 	size_t tf = round(timeStep / tau); // Коэффициент пропорциональности шагов
 
-	int flag1 = 1;        // != 0 - считывать из файла, 0 - заполнять случайно
-	int flag2 = 1;        // != 0 - записывать в файлы, 0 - нет
+	int flag1 = 0;        // != 0 - считывать из файла, 0 - заполнять случайно
+	int flag2 = 0;        // != 0 - записывать в файлы, 0 - нет
 
 	double mLeft = 1e+9;  
 	double mRight = 1e+10;  
