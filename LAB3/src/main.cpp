@@ -12,6 +12,9 @@ using std::cout;
 
 
 int main(int argc, char **argv) {
+    // Количество тел
+    int N = 4;
+
     // != 0 - считывать из файла, 0 - заполнять случайно
     bool doReadFromFile = true;
     // != 0 - записывать в файлы, 0 - нет

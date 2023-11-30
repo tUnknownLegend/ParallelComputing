@@ -2,8 +2,6 @@
 #include <fstream>
 #include <cmath>
 
-int N = 4; // Количество тел
-
 const int num = 4; // Номер разбиения
 
 const double tau = num * 1e-3; // Шаг по времени
