@@ -13,7 +13,7 @@ using std::cout;
 
 int main(int argc, char **argv) {
     // != 0 - считывать из файла, 0 - заполнять случайно
-    int doReadFromFile = 1;
+    bool doReadFromFile = true;
     // != 0 - записывать в файлы, 0 - нет
     int doWriteToFile = 1;
 
@@ -35,12 +35,10 @@ int main(int argc, char **argv) {
     int *locOffset = new int[np];
 
     if (myId == 0) {
+        data = new Body[N];
         if (doReadFromFile) {
-            data = new Body[N];
             read_file("4body.txt", data, N);
         } else {
-            data = new Body[N];
-
             for (int i = 0; i < N; ++i) {
                 data[i].weight = GetRandomDouble(weightRange.first, weightRange.second);
 
@@ -54,7 +52,7 @@ int main(int argc, char **argv) {
         locOffset[0] = 0;
 
         // Размер частей массива
-        int L = N / np;
+        const int L = N / np;
 
         for (int p = 0; p < np - 1; ++p) {
             locSize[p] = L;
@@ -91,10 +89,10 @@ int main(int argc, char **argv) {
     MPI_Datatype MPI_Helptype; // Вспомогательный тип
     MPI_Type_create_struct(1, lengthsR, offsetsR, typesR, &MPI_Helptype);
 
-    MPI_Datatype mpi_Body_r;
-    MPI_Type_create_resized(MPI_Helptype, 0, 56, &mpi_Body_r); // Body состоит из 7 double => 7 x 8 = 56
+    MPI_Datatype MPI_Body_Position;
+    MPI_Type_create_resized(MPI_Helptype, 0, 7 * sizeof(double), &MPI_Body_Position); // Body состоит из 7 double
 
-    MPI_Type_commit(&mpi_Body_r);
+    MPI_Type_commit(&MPI_Body_Position);
 
 
     // Рассылка всем процессам частей массива "тел"
@@ -117,10 +115,6 @@ int main(int argc, char **argv) {
 
         for (int i = 0; i < locSize[myId]; ++i) {
             F[i].open(std::to_string(num) + "_Body_" + std::to_string(locOffset[myId] + i + 1) + ".txt");
-
-            //F[i].open("Body_" + std::to_string(locOffset[myId] + i + 1) + ".txt");
-
-            //F[i] << N << " " << locDat[i].weight << " " << tau << std::endl;
 
             F[i] << 0.0 << " " << locDat[i];
         }
@@ -153,7 +147,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        MPI_Allgatherv(locDatBuf, locSize[myId], mpi_Body_r, data, locSize, locOffset, mpi_Body_r, MPI_COMM_WORLD);
+        MPI_Allgatherv(locDatBuf, locSize[myId], MPI_Body_Position, data, locSize, locOffset, MPI_Body_Position, MPI_COMM_WORLD);
 
         for (int i = 0; i < locSize[myId]; ++i) {
 
