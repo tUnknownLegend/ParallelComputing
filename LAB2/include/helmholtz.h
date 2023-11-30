@@ -5,6 +5,7 @@
 #include <cmath>
 #include <string>
 #include <functional>
+#include <mpi.h>
 
 enum JacobiSolutionMethod {
     JacobiSendReceive,
@@ -28,11 +29,13 @@ const std::vector<std::pair<double, double>> region = {
 const double h = 0.1;
 const double k = 0.1;
 
+const double sqrH = pow(h, 2);
+
 const std::pair<int, int> sizeOfTask = {(region[0].second - region[0].first) / h + 1,
                                         (region[1].second - region[1].first) / k + 1};
 
 const int N = sizeOfTask.first;
-const double multiplayer = (4.0 + pow(k, 2) * pow(h, 2));
+const double multiplier = (4.0 + pow(k, 2) * pow(h, 2));
 
 
 class Helmholtz {
@@ -40,34 +43,36 @@ private:
     static inline void
     JacobiSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                    int myId,
-                   int np, int &shift);
+                   int np, int &shift, int iterationsCount);
 
     static inline void
     JacobiSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                       int myId,
-                      int np, int &shift);
+                      int np, int &shift, int iterationsCount);
 
     static inline void
     JacobiISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
                      int myId,
-                     int np, int &shift);
+                     int np, int &shift, MPI_Request *reqSendUp, MPI_Request *reqRecvUp,
+                     MPI_Request *reqSendDown, MPI_Request *reqRecvDown, int iterationsCount);
 
     static inline void
     redAndBlackSendRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                         std::vector<int> &elementNumber, int myId,
-                        int np, int &shift);
+                        int np, int &shift, int iterationsCount);
 
     static inline void
     redAndBlackSendAndRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                            std::vector<int> &elementNumber,
                            int myId,
-                           int np, int &shift);
+                           int np, int &shift, int iterationsCount);
 
     static inline void
     redAndBlackISendIRecv(std::vector<double> &solution, std::vector<double> &tempSolution,
                           std::vector<int> &elementNumber,
                           int myId,
-                          int np, int &shift);
+                          int np, int &shift, MPI_Request *reqSendUp, MPI_Request *reqRecvUp,
+                          MPI_Request *reqSendDown, MPI_Request *reqRecvDown, int iterationsCount);
 
     static double
     solveMPI(std::vector<double> &solution, std::vector<double> &tempSolution, std::vector<int> &elementNumber,
@@ -75,7 +80,9 @@ private:
              int np, int &iterationCount,
              const std::function<void(std::vector<double> &solution, std::vector<double> &tempSolution,
                                       std::vector<int> &elementNumber, int myId,
-                                      int np, int &shift)> &calc);
+                                      int np, int &shift, int iterationsCount)> &calc,
+             JacobiSolutionMethod jacobiMethodType = JacobiNone,
+             RedAndBlackSolutionMethod redAndBlackMethodType = RedAndBlackNone);
 
     static double rightSideFunction(double x, double solution);
 
