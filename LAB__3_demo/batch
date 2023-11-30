@@ -1,0 +1,7 @@
+#!/bin/sh
+#SBATCH --job-name=Sukhova_Pinevich
+#SBATCH --time=00:15:00
+#SBATCH --nodes=2 --ntasks-per-node=1
+#SBATCH --partition release
+ulimit -l unlimited
+mpirun -n 2  /nethome/student/FS20/FS2-x1/Pinevich_Sukhova/LAB3/executable
