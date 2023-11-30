@@ -810,3 +810,6 @@ TSWLatexianTemp*
 *.xwm
 
 executable
+
+LAB3/4_Body*.txt
+

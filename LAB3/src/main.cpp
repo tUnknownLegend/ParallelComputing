@@ -8,14 +8,19 @@
 using std::pair;
 using std::ostream;
 using std::endl;
+using std::cout;
 
 
 int main(int argc, char **argv) {
-    int doReadFromFile = 1; // != 0 - считывать из файла, 0 - заполнять случайно
-    int doWriteToFile = 1;  // != 0 - записывать в файлы, 0 - нет
-    
-    int myId = 0; // Номер текущего процесса
-    int np = 0; // Общее число всех процессов
+    // != 0 - считывать из файла, 0 - заполнять случайно
+    int doReadFromFile = 1;
+    // != 0 - записывать в файлы, 0 - нет
+    int doWriteToFile = 1;
+
+    // Номер текущего процесса
+    int myId = 0;
+    // Общее число всех процессов
+    int np = 0;
 
     MPI_Init(&argc, &argv);
 
@@ -24,8 +29,10 @@ int main(int argc, char **argv) {
 
     Body *data = nullptr; // Массив "тел"
 
-    int *locSize = new int[np];    // Массивы длин и смещений
-    int *locOffset = new int[np]; // локальных массивов
+    // Массив длин
+    int *locSize = new int[np];
+    // массив смещений локальных массивов
+    int *locOffset = new int[np];
 
     if (myId == 0) {
         if (doReadFromFile) {
@@ -46,7 +53,8 @@ int main(int argc, char **argv) {
 
         locOffset[0] = 0;
 
-        int L = N / np; // Размер частей массива
+        // Размер частей массива
+        int L = N / np;
 
         for (int p = 0; p < np - 1; ++p) {
             locSize[p] = L;
@@ -168,7 +176,7 @@ int main(int argc, char **argv) {
     //
 
     if (myId == 0) {
-        std::cout << "time = " << end - start << std::endl << std::endl;
+        cout << "time = " << end - start << endl;
     }
 
 
