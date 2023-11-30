@@ -111,11 +111,10 @@ int main(int argc, char **argv) {
 
     MPI_Bcast(&doWriteToFile, 1, MPI_INT, 0, MPI_COMM_WORLD); // Рассылка флага записи в файлы всем процессам
 
-    std::ofstream *F = nullptr;
+    // Массив файлов для каждого узла
+    auto *F = new std::ofstream[locSize[myId]];;
 
     if (doWriteToFile) {
-        F = new std::ofstream[locSize[myId]]; // Массив файлов для каждого узла
-
         for (int i = 0; i < locSize[myId]; ++i) {
             F[i].open(std::to_string(num) + "_Body_" + std::to_string(locOffset[myId] + i + 1) + ".txt");
 
@@ -124,7 +123,6 @@ int main(int argc, char **argv) {
     }
 
     Body bod_i{}; // Текущее тело
-
 
     double a[3] = {0.0, 0.0, 0.0}; // Текущие ускорения
     Body *locDatBuf = new Body[locSize[myId]];  // Промежуточный локальный массив "тел"
@@ -161,8 +159,9 @@ int main(int argc, char **argv) {
                 locDat[i].velocity[k] += 0.5 * tau * (w[3 * i + k] + a[k]);
             }
 
-            if (t % tf == 0 && doWriteToFile)
+            if (t % tf == 0) {
                 F[i] << t * tau << " " << locDat[i];
+            }
         }
 
         MPI_Allgatherv(locDat, locSize[myId], MPI_Body, data, locSize, locOffset, MPI_Body, MPI_COMM_WORLD);
@@ -177,9 +176,11 @@ int main(int argc, char **argv) {
     }
 
 
-    if (doWriteToFile)
-        for (int i = 0; i < locSize[myId]; ++i)
+    if (doWriteToFile) {
+        for (int i = 0; i < locSize[myId]; ++i) {
             F[i].close();
+        }
+    }
 
     delete[] F;
     delete[] data;
