@@ -26,7 +26,8 @@ struct Body {
 
 std::ostream &operator<<(std::ostream &str, const Body &b);
 
-double vectorNorm(const double *r);
+inline double vectorNorm(const double *r);
+inline double vectorNorm2(const double *r);
 
 inline double raiseToThirdPower(double a);
 

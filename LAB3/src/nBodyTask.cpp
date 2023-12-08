@@ -17,8 +17,16 @@ double vectorNorm(const double *r) {
     return sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
 }
 
+double vectorNorm2(const double *r) {
+    return r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
+}
+
 inline double raiseToThirdPower(const double a) {
     return a * a * a;
+}
+
+inline double raiseTo32Power(const double a) {
+    return a * sqrt(a);
 }
 
 void acceleration(double *a, const int N, const double *r, const Body *data, const double G) {
@@ -27,8 +35,6 @@ void acceleration(double *a, const int N, const double *r, const Body *data, con
 
     for (int k = 0; k < 3; ++k)
         a[k] = 0.0;
-
-    double coeff = 1.0;
 
     Body bod_j{};
 
@@ -39,13 +45,17 @@ void acceleration(double *a, const int N, const double *r, const Body *data, con
         for (int k = 0; k < 3; ++k)
             buf[k] = bod_j.position[k] - r[k];
 
-        coeff = raiseToThirdPower(1.0 / std::max(vectorNorm(buf), 1e-6));
+        const double mul = bod_j.weight / raiseToThirdPower(std::max(vectorNorm(buf), 1e-6));
 
         for (int k = 0; k < 3; ++k) {
-            buf[k] *= G * bod_j.weight * coeff;
-            a[k] += buf[k];
+            buf[k] *= mul;
+            a[k] +=  buf[k];
         }
     }
+
+    for (int k = 0; k < 3; ++k)
+        a[k] *= G;
+
 }
 
 void read_file(const std::string &file_name, Body *data, int &N) {

@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 
     const double start = MPI_Wtime();
 
-    // Расчётная схема
+    // РК2 
     for (int t = 1; t <= Nt; ++t) {
         for (int i = 0; i < locSize[myId]; ++i) {
             bod_i = locDat[i];
