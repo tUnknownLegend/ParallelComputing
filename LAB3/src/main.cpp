@@ -13,12 +13,12 @@ using std::cout;
 
 int main(int argc, char **argv) {
     // Количество тел
-    int N = 4;
+    int N = 10000;
 
     // != 0 - считывать из файла, 0 - заполнять случайно
-    bool doReadFromFile = true;
+    bool doReadFromFile = false;
     // != 0 - записывать в файлы, 0 - нет
-    int doWriteToFile = 1;
+    int doWriteToFile = 0;
 
     // Номер текущего процесса
     int myId = 0;
