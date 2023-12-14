@@ -42,7 +42,7 @@ std::ostream &operator<<(std::ostream &str, const Body &b) {
 
 void WriteFile(const std::string &file, const Body *body, MyType t, int glob_i) {
     std::ofstream F(file + std::to_string(glob_i) + ".txt", std::ios::app);
-    F << std::setprecision(10) << *body->m << " " << *body->r[0] << " " << *body->r[1] << " " << *body->r[2]
+    F << std::setprecision(10) << body->m << " " << body->r[0] << " " << body->r[1] << " " << body->r[2]
       << std::endl;
     F.close();
     F.clear();
