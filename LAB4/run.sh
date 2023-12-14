@@ -1,6 +1,6 @@
+#!/bin/sh
 rm file*.txt
 rm GPUdata*.txt
-#!/bin/sh
 #SBATCH --job-name=Sukhova_Pinevich
 #SBATCH --time=00:05:00
 #SBATCH --nodes=1 --ntasks-per-node=16
