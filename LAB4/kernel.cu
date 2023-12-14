@@ -89,9 +89,9 @@ void solveNBodyRungeKutta2(DataType time_step, DataType end_time, int num_of_bod
     cudaMalloc(&dev_radius_buffer, num_of_bodies3 * sizeof(DataType));
     cudaMalloc(&dev_velocity_buffer, num_of_bodies3 * sizeof(DataType));
 
-    cudaMemcpy(dev_mass, weight.data(), num_of_bodies * sizeof(DataType), cudaMemcpyHostToDevice)
-    cudaMemcpy(dev_radius, point.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice)
-    cudaMemcpy(dev_velocity, velocity.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice)
+    cudaMemcpy(dev_mass, weight.data(), num_of_bodies * sizeof(DataType), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_radius, point.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_velocity, velocity.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice);
 
     int num_of_blocks = (num_of_bodies + BLOCK_SIZE - 1) / BLOCK_SIZE;
     int threads_per_block = BLOCK_SIZE;
