@@ -128,7 +128,9 @@ int main(int argc, char** argv) {
         if (NeedWriteToFile) {
             if (fabs(t - temp * output_tau) < 1e-5) {
                 cudaMemcpy(coord.data(), device_coord, size3 * sizeof(mytype), cudaMemcpyDeviceToHost);
-
+                for (int i = 0; i < size; ++i) {
+                    WriteToFile(output_file_name, t, i, coord[3 * i], coord[3 * i + 1], coord[3 * i + 2]);
+                }
 
                 temp += 1.0;
             }
@@ -136,9 +138,7 @@ int main(int argc, char** argv) {
 
     }
 
-    for (int i = 0; i < size; ++i) {
-        WriteToFile(output_file_name, T + half_tau, i, coord[3 * i], coord[3 * i + 1], coord[3 * i + 2]);
-    }
+
 
     cudaEventRecord(stop,0);
     cudaEventSynchronize(stop);
