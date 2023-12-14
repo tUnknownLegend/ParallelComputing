@@ -124,11 +124,11 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
     int glob_i = blockIdx.x * blockDim.x + threadIdx.x; // Текущий номер
 
     // std::ofstream F("Body_" + std::to_string(glob_i) + ".txt"); // Файл выходных данных
-    // std::ofstream F("Body.txt", std::ios::app); // Файл выходных данных
+    std::ofstream F("Body.txt", std::ios::app); // Файл выходных данных
 
     Body bod_i = data[glob_i]; // Текущее тело
 
-    // F << 0.0 << " " << bod_i;
+    F << 0.0 << " " << bod_i;
 
     MyType a[3] = {0.0, 0.0, 0.0}; // Текущие ускорения
     MyType w[3] = {0.0, 0.0, 0.0}; // Начальные ускорения
@@ -167,7 +167,7 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
                 F << t * tau << " " << bod_i;
         }
 
-     F.close();
+    F.close();
 }
 
 int main(int argc, char **argv) {
