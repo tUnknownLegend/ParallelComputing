@@ -1,1 +1,1 @@
-nvcc -O2 -gencode arch=compute_70,code=sm_70 -o run kernel.cu -Xcompiler -fopenmp
+nvcc -O3 -gencode arch=compute_70,code=sm_70 -o exec kernel.cu -Xcompiler -fopenmp
