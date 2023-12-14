@@ -1,263 +1,328 @@
-#include <cuda_runtime.h>
-#include "device_launch_parameters.h"
-
 #include <iostream>
 #include <fstream>
-#include <string>
 #include <cstring>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 #include <random>
-#include <iomanip>
-#include <omp.h>
+#include <vector>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
-#define MyType double
+#define mytype float
 
-struct Body // Структура "тело"
-{
-    MyType m;    // Масса
-    MyType r[3]; // Координаты
-    MyType v[3]; // Скорости
+using namespace std;
 
-    // Перегрузка оператора присваивания
-    __device__ __host__ Body &operator=(const Body &p) {
-        m = p.m;
-        for (int i = 0; i < 3; ++i) {
-            r[i] = p.r[i];
-            v[i] = p.v[i];
-        }
-        return *this;
+int N = 4;
+
+bool NeedWriteToFile = false;
+bool ManyBody = false;
+
+const string input_file_name = "Input.txt";
+const string gendata_file_name = "genbody.txt";
+const string output_file_name = "traj.txt";
+
+const mytype G = 6.67e-11;
+const mytype eps = 1e-3;
+mytype T = 20.0;
+mytype tau = 0.01;
+const double output_tau = 0.1;
+const int stop_iter = 10;
+const int block_size = 128;
+
+__device__ mytype norm_minus(mytype x, mytype y, mytype z);
+
+void ReadFromFile(const string& filename, vector<mytype>& mass, vector <mytype>& coord, vector<mytype>& vel);
+__host__ void GenDataInFile (int N, const string filename);
+__host__ void WriteToFile(const string &file_name, mytype t, int num_body, mytype x1, mytype x2, mytype x3);
+__host__ void ClearFile(const std::string &file_name);
+
+__global__ void AccVel(int N, mytype* device_mass, mytype* device_coord, mytype* device_vel, mytype* k_coord, mytype* k_vel);
+__global__ void FindSol(int N, mytype* prev, mytype* next, mytype h, mytype* res);
+__global__ void FinalStep(int N, mytype* device_coord, mytype* device_vel, mytype tau, mytype* k2_coord, mytype* k2_vel);
+
+
+
+int main(int argc, char** argv) {
+
+    vector <mytype> mass;
+    vector <mytype> coord;
+    vector <mytype> vel;
+
+    if (!ManyBody) {
+        ReadFromFile(input_file_name, mass, coord, vel);
     }
-};
-
-// Перегрузка оператора вывода для структуры "тело"
-std::ostream &operator<<(std::ostream &str, const Body &b) {
-    str << std::setprecision(10) << b.r[0] << " " << b.r[1] << " " << b.r[2] << std::endl;
-
-    return str;
-}
-
-void WriteFile(const std::string &file, const Body &body, MyType t, int glob_i) {
-    std::ofstream F(file + std::to_string(glob_i) + ".txt", std::ios::app);
-    F << std::setprecision(10) << body.m << " " << body.r[0] << " " << body.r[1] << " " << body.r[2]
-      << std::endl;
-    F.close();
-    F.clear();
-}
-
-// Модуль вектора
-__device__ inline MyType My_norm_vec(const MyType *r) {
-    return r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
-}
-
-// Вычисление ускорения
-__device__ void My_a(MyType *a, const int N, const MyType *r, const int glob_i, const Body *data, MyType G) {
-    MyType buf[3] = {0.0, 0.0, 0.0};
-
-    for (int k = 0; k < 3; ++k)
-        a[k] = 0.0;
-
-    MyType coefN = 1.0;
-
-    Body bod_j;
-
-    float4 dob4;
-
-    __shared__ float4 SharedBlock[512];
-
-    for (int k = 0; k < N / blockDim.x; ++k) {
-        bod_j = data[blockDim.x * k + threadIdx.x];
-
-        SharedBlock[threadIdx.x] = make_float4(bod_j.r[0], bod_j.r[1], bod_j.r[2], bod_j.m);
-
-        __syncthreads();
-
-        for (int j = 0; j < blockDim.x; ++j) {
-            if (glob_i == blockDim.x * k + j)
-                continue;
-
-            dob4 = SharedBlock[j];
-
-            // for (int k = 0; k < 3; ++k)
-            // buf[k] = bod_j[k] - r[k];
-
-            buf[0] = dob4.x - r[0];
-            buf[1] = dob4.y - r[1];
-            buf[2] = dob4.z - r[2];
-
-            coefN = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2]; //My_norm_vec(buf);
-
-            //coefN *= sqrtf(coefN);
-
-            // coefN *= coefN * coefN;
-
-            coefN = __fdividef(rsqrtf(coefN), coefN) * dob4.w;
-
-#pragma unroll
-            for (int k = 0; k < 3; ++k) {
-                a[k] += coefN * buf[k];
-            }
-
-
-        }
-
-        __syncthreads();
+    else {
+        GenDataInFile(N, gendata_file_name);
+        ReadFromFile(gendata_file_name, mass, coord, vel);
     }
 
-#pragma unroll
-    for (int k = 0; k < 3; ++k) {
-        a[k] *= G;
-    }
-}
+    int size = mass.size();
+    int size3 = 3 * size;
 
-__global__ void simulate(int N, Body *data, MyType tau, int flagF) {
-    MyType timeStep = 1e-1;  // Шаг записи в файлы
+    if (!NeedWriteToFile)
+        T = tau * mytype(stop_iter);
 
-    MyType tn = 1.0; // Конечный момент времени
+    mytype* device_mass;
+    mytype* device_coord;
+    mytype* device_vel;
 
-    int Nt = round(tn / tau);       // Количество шагов по времени
-    int tf = round(timeStep / tau); // Коэффициент пропорциональности шагов
+    cudaMalloc(&device_mass, size * sizeof(mytype));
+    cudaMalloc(&device_coord, size3 * sizeof(mytype));
+    cudaMalloc(&device_vel, size3 * sizeof(mytype));
 
-    const MyType G = 6.67e-11; // Гравитационная постоянная
+    mytype* tempDevice_coord;
+    mytype* tempDevice_vel;
+    mytype* k1_coord;
+    mytype* k2_coord;
+    mytype* k1_vel;
+    mytype* k2_vel;
 
-    int glob_i = blockIdx.x * blockDim.x + threadIdx.x; // Текущий номер
+    cudaMalloc(&tempDevice_coord, size3 * sizeof(mytype));
+    cudaMalloc(&tempDevice_vel, size3 * sizeof(mytype));
+    cudaMalloc(&k1_coord, size3 * sizeof(mytype));
+    cudaMalloc(&k2_coord, size3 * sizeof(mytype));
+    cudaMalloc(&k1_vel, size3 * sizeof(mytype));
+    cudaMalloc(&k2_vel, size3 * sizeof(mytype));
 
-    Body bod_i = data[glob_i]; // Текущее тело
+    cudaMemcpy(device_mass, mass.data(), size * sizeof(mytype), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_coord, coord.data(), size3 * sizeof(mytype), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_vel, vel.data(), size3 * sizeof(mytype), cudaMemcpyHostToDevice);
 
-    MyType a[3] = {0.0, 0.0, 0.0}; // Текущие ускорения
-    MyType w[3] = {0.0, 0.0, 0.0}; // Начальные ускорения
+    dim3 blocks = dim3(N / block_size + (N % block_size != 0) , 1, 1);
+    dim3 threads = dim3(block_size, 1, 1);
 
-    Body buf;
+    mytype half_tau = tau / 2;
+    double t = 0.0;
 
-    // Body* globData = new Body[N];
+    // if (NeedWriteToFile) {
+    // for (int i = 0; i < size; ++i) {
+    // ClearFile(to_string(i + 1) + output_file_name);
+    // WriteToFile(output_file_name, t, i, coord[3 * i], coord[3 * i + 1], coord[3 * i + 2]);
+    // }
 
-    // Расчётная схема
+    // }
+    double temp = 1.0;
 
-    if (glob_i < N)
-
-        for (int t = 1; t <= Nt; ++t) {
-            buf = bod_i;
-            My_a(w, N, bod_i.r, glob_i, data, G);
-
-            for (int k = 0; k < 3; ++k)
-                buf.r[k] += tau * bod_i.v[k];
-
-            data[glob_i] = buf;
-
-            __syncthreads();
-
-            My_a(a, N, buf.r, glob_i, data, G);
-
-            for (int k = 0; k < 3; ++k) {
-                bod_i.r[k] += tau * (bod_i.v[k] + 0.5 * tau * w[k]);
-                bod_i.v[k] += 0.5 * tau * (w[k] + a[k]);
-            }
-
-            data[glob_i] = bod_i;
-
-            __syncthreads();
-        }
-}
-
-int main(int argc, char **argv) {
-    int block = 128; // Размер блока
-
-    int N = 4; // Количество тел
-
-    MyType tau = 0.02; // Шаг по времени
-
-    int flagInitData = 1; // != 0 - считывать из файла, 0 - заполнять случайно
-    int flagF = 1;        // != 0 - записывать в файлы, 0 - нет
-
-    MyType mL = 1e+9;  // Нижняя и верхняя  
-    MyType mR = 1e+10; // границы значения масс
-
-    MyType rL = -1.0;  // Нижняя и верхняя
-    MyType rR = 1.0;   // границы значения координат
-
-    MyType vL = -1.0;  // Нижняя и верхняя
-    MyType vR = 1.0;   // границы значения скоростей
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    std::uniform_real_distribution<MyType> dis(0.0, 1.0); // Случайные числа от 0 до 1
-
-
-    Body *data; // Массив "тел"
-
-    if (flagInitData) {
-        std::ifstream F("Input.txt"); // Файл входных данных
-
-        F >> N; // Количество тел
-
-        data = new Body[N]; // Массив "тел"
-
-        for (int i = 0; i < N; ++i)
-            F >> data[i].m >> data[i].r[0] >> data[i].r[1] >> data[i].r[2] >> data[i].v[0] >> data[i].v[1]
-              >> data[i].v[2];
-
-        F.close();
-    } else {
-        data = new Body[N]; // Массив "тел"
-
-        for (int i = 0; i < N; ++i) {
-            data[i].m = mL + dis(gen) * (mR - mL);
-
-            for (int k = 0; k < 3; ++k) {
-                data[i].r[k] = rL + dis(gen) * (rR - rL);
-                data[i].v[k] = vL + dis(gen) * (vR - vL);
-            }
-        }
-    }
-
-//    std::cout << "N = " << N << std::endl;
-//    std::cout << "tau = " << tau << std::endl;
-
-    Body *GPUdata;
-
-    // Копирование массива data в видеокарты
-    cudaMalloc((void **) &GPUdata, N * sizeof(Body));
-    cudaMemcpy(GPUdata, data, N * sizeof(Body), cudaMemcpyHostToDevice);
-
-    // Обработчик событий 
     cudaEvent_t start, stop;
-    float time = 0.0;
-
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    cudaEventRecord(start, 0);
 
-    int blockCount = 0;
+    cudaEventRecord(start,0);
 
-    if (N < block) {
-        simulate<<<1, N>>>(N, GPUdata, tau, flagF);
-    } else {
-        blockCount = N / block + N % block;
-        simulate<<<blockCount, block>>>(N, GPUdata, tau, flagF);
+    int iter = 0;
+
+//Рунге-Кутты-2
+
+    while (t < T + half_tau)
+    {
+        AccVel <<<blocks, threads >>> (size, device_mass, device_coord, device_vel, k1_coord, k1_vel);
+
+        FindSol <<<blocks, threads >>> (size, device_coord, k1_coord, half_tau, tempDevice_coord);
+        FindSol <<<blocks, threads >>> (size, device_vel, k1_vel, half_tau, tempDevice_vel);
+
+        AccVel <<<blocks, threads >>> (size, device_mass, tempDevice_coord, tempDevice_vel, k2_coord, k2_vel);
+
+        FinalStep <<<blocks, threads >>> (size, device_coord, device_vel, tau, k2_coord, k2_vel);
+
+        iter += 1;
+        t += tau;
+
+        if (NeedWriteToFile) {
+            if (fabs(t - temp * output_tau) < 1e-5) {
+                cudaMemcpy(coord.data(), device_coord, size3 * sizeof(mytype), cudaMemcpyDeviceToHost);
+
+
+                temp += 1.0;
+            }
+        }
+
     }
 
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&time, start, stop);
+    for (int i = 0; i < size; ++i) {
+        WriteToFile(output_file_name, T + half_tau, i, coord[3 * i], coord[3 * i + 1], coord[3 * i + 2]);
+    }
 
-    std::cout << "time = " << time / 1000.0 << std::endl << std::endl;
+    cudaEventRecord(stop,0);
+    cudaEventSynchronize(stop);
+
+    float time;
+    cudaEventElapsedTime(&time,start,stop);
+    printf("Iterations: %d\n", iter);
+    printf("Time spent by GPU on 1 iteration: %f\n", (time/1000.0)/iter);
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    cudaMemcpy(data, GPUdata, N * sizeof(Body), cudaMemcpyHostToDevice);
 
-    for (int t = 0; t < N; ++t) {
-        for (int k = 0; k < 3; ++k) {
-            WriteFile("file", *(data + t), t, k);
-//            WriteFile("GPUdata", *(GPUdata + t), t, k);
-        }
-    }
-
-    cudaFree(GPUdata);
-    delete[]data;
+    cudaFree(device_coord);
+    cudaFree(device_vel);
+    cudaFree(device_mass);
+    cudaFree(tempDevice_coord);
+    cudaFree(tempDevice_vel);
+    cudaFree(k1_coord);
+    cudaFree(k2_coord);
+    cudaFree(k1_vel);
+    cudaFree(k2_vel);
 
     return 0;
 }
+
+
+
+void ReadFromFile(const string& filename, vector<mytype>& mass, vector <mytype>& coord, vector<mytype>& vel) {
+    ifstream inf(filename);
+    if (!inf) {
+        cerr << "File not found :(" << endl;
+        exit(1);
+    }
+    inf >> N;
+
+    mass.resize(N);
+    coord.resize(N * 3);
+    vel.resize(N * 3);
+
+    for (int i = 0; i < N; i++) {
+        inf >> mass[i] >> coord[3 * i]  >> coord[3 * i + 1]  >> coord[3 * i + 2] \
+        >> vel[3 * i] >> vel[3 * i + 1] >> vel[3 * i + 2];
+    }
+    inf.close();
+}
+
+__host__ void GenDataInFile (int N, const string filename) {
+    ofstream out(filename);
+    if (!out) {
+        cerr << "File not found :(" << endl;
+        exit(1);
+    }
+    out << N << "\n";
+
+    mytype buf = 0.0;
+
+    for (int i=0; i<N; i++) {
+        random_device random_device;
+        mt19937 gen(random_device());
+        uniform_int_distribution <> dist_m(1e6, 1e8);
+        uniform_int_distribution <> dist_v_r(-10, 10);
+
+        //mass
+        buf = dist_m(gen);
+        out << buf;
+
+        //3 для coord + 3 для vel
+        for (int j=0; j < 6; j++) {
+            buf = dist_v_r(gen);
+            out << " " << buf;
+        }
+        out << "\n" ;
+    }
+    out.close();
+}
+__device__ mytype norm_minus(mytype x, mytype y, mytype z)
+{
+    mytype norm = (x * x) + (y * y) + (z * z);
+    return sqrt(norm);
+}
+
+__device__ inline mytype sqr(mytype x)
+{return x*x;}
+
+__device__ inline mytype cub(mytype x)
+{return x*x*x;}
+
+
+__global__ void AccVel(int N, mytype* device_mass, mytype* device_coord, mytype* device_vel, mytype* k_coord, mytype* k_vel) {
+    int GlobalIdx = threadIdx.x + blockDim.x * blockIdx.x;
+    int GlobalIdx3 = 3 * (threadIdx.x + blockDim.x * blockIdx.x);
+    int LocalIdx = threadIdx.x;
+    int LocalIdx3 = 3 * LocalIdx;
+
+    __shared__ mytype shared_coord[3 * block_size];
+    __shared__ mytype shared_mass[block_size];
+
+    mytype eps2 = eps*eps;
+
+    mytype k_vel1 = 0.0;
+    mytype k_vel2 = 0.0;
+    mytype k_vel3 = 0.0;
+    mytype a;
+    mytype my_coord1 = device_coord[GlobalIdx3];
+    mytype my_coord2 = device_coord[GlobalIdx3 + 1];
+    mytype my_coord3 = device_coord[GlobalIdx3 + 2];
+    mytype diff_coord1;
+    mytype diff_coord2;
+    mytype diff_coord3;
+
+    mytype denom;
+    mytype d2;
+    for (int i = 0; i < N; i += block_size) {
+        shared_mass[LocalIdx] = device_mass[i + LocalIdx];
+        shared_coord[LocalIdx3]     = device_coord[3 * (i + LocalIdx)];
+        shared_coord[LocalIdx3 + 1] = device_coord[3 * (i + LocalIdx) + 1];
+        shared_coord[LocalIdx3 + 2] = device_coord[3 * (i + LocalIdx) + 2];
+
+        __syncthreads();
+
+        for (int j = 0; j < block_size; ++j) {
+            if (i + j < N) {
+                diff_coord1 = my_coord1 - shared_coord[3 * j];
+                diff_coord2 = my_coord2 - shared_coord[3 * j + 1];
+                diff_coord3 = my_coord3 - shared_coord[3 * j + 2];
+
+                d2 = fmaxf(sqr(diff_coord1)+sqr(diff_coord2)+sqr(diff_coord3), eps2);
+
+                a = __fdividef(shared_mass[j] * rsqrtf(d2), d2);
+
+                //denom = norm_minus(diff_coord1, diff_coord2, diff_coord3) * norm_minus(diff_coord1, diff_coord2, diff_coord3) * norm_minus(diff_coord1, diff_coord2, diff_coord3);
+                //a = shared_mass[j] / max(denom, eps3);
+
+                k_vel1 += diff_coord1 * a;
+                k_vel2 += diff_coord2 * a;
+                k_vel3 += diff_coord3 * a;
+            }
+        }
+        __syncthreads();
+    }
+    if (GlobalIdx < N) {
+        k_vel[GlobalIdx3]     = -G * k_vel1;
+        k_vel[GlobalIdx3 + 1] = -G * k_vel2;
+        k_vel[GlobalIdx3 + 2] = -G * k_vel3;
+
+        for (size_t i = 0; i < 3; ++i) {
+            k_coord[GlobalIdx3 + i] = device_vel[GlobalIdx3 + i];
+        }
+    }
+}
+
+__global__ void FindSol(int N, mytype* prev, mytype* next, mytype h, mytype* res) {
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+
+    if (idx < N) {
+        for (int i = 0; i < 3; i++) {
+            res[3 * idx + i] = prev[3 * idx + i] + h * next[3 * idx + i];
+        }
+    }
+}
+
+__global__ void FinalStep(int N, mytype* device_coord, mytype* device_vel, mytype tau, mytype* k2_coord, mytype* k2_vel) {
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    if (idx < N) {
+        for (int i = 0; i < 3; i++) {
+            device_coord[3 * idx + i] += tau * k2_coord[3 * idx + i];
+            device_vel[3 * idx + i] += tau * k2_vel[3 * idx + i];
+        }
+    }
+}
+
+__host__ void WriteToFile(const string &file_name, mytype t, int num_body, mytype x1, mytype x2, mytype x3) {
+    ofstream file(to_string(num_body + 1) + file_name, std::ios::app);
+    file << t << "    ";
+    file << x1 << "    " << x2 << "    " << x3 << "    ";
+    file << endl;
+    file.close();
+}
+
+__host__ void ClearFile(const std::string &file_name) {
+    ofstream file(file_name, std::ios::trunc);
+    file.close();
+    file.clear();
+}
+
+
