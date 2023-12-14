@@ -242,8 +242,8 @@ int main(int argc, char** argv)
         }
     }
 
-//    std::cout << "N = " << N << std::endl;
-//    std::cout << "tau = " << tau << std::endl;
+    std::cout << "N = " << N << std::endl;
+    std::cout << "tau = " << tau << std::endl;
 
     Body* GPUdata;
 
@@ -275,7 +275,7 @@ int main(int argc, char** argv)
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&time, start, stop);
 
-//    std::cout << "time = " << time / 1000.0 << std::endl << std::endl;
+    std::cout << "time = " << time / 1000.0 << std::endl << std::endl;
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
