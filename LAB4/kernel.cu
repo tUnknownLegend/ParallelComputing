@@ -193,8 +193,7 @@ int main(int argc, char** argv)
     
     MyType tau = 1e-1; // Шаг по времени
 
-    int flagInitData = 0; // != 0 - считывать из файла, 0 - заполнять случайно
-    int flagF = 0;        // != 0 - записывать в файлы, 0 - нет
+    int flagInitData = 1; // != 0 - считывать из файла, 0 - заполнять случайно
 
     MyType mL = 1e+9;  // Нижняя и верхняя  
     MyType mR = 1e+10; // границы значения масс
@@ -259,7 +258,7 @@ int main(int argc, char** argv)
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
 
-    size_t blockСount = 0;
+    size_t blockCount = 0;
 
     if (N < block)
     {
@@ -267,8 +266,8 @@ int main(int argc, char** argv)
     } 
     else
     {
-        blockСount = N / block + N % block;
-        simulate<<<blockСount, block>>>(N, GPUdata, tau, flagF);
+        blockCount = N / block + N % block;
+        simulate<<<blockCount, block>>>(N, GPUdata, tau, flagF);
     }
 
     cudaEventRecord(stop, 0);
