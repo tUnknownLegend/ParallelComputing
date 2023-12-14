@@ -163,11 +163,11 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
 
             __syncthreads();
 
-            // if (t % tf == 0 && flagF)
-            // F << t * tau << " " << bod_i;
+            if (t % tf == 0 && flagF)
+                F << t * tau << " " << bod_i;
         }
 
-    // F.close();
+     F.close();
 }
 
 int main(int argc, char **argv) {
@@ -259,12 +259,12 @@ int main(int argc, char **argv) {
 
     cudaMemcpy(data, GPUdata, N * sizeof(Body), cudaMemcpyHostToDevice);
 
-    for (int t = 0; t < N; ++t) {
-        for (int k = 0; k < 3; ++k) {
-            WriteFile("file", *(data + t), t, k);
-            WriteFile("GPUdata", *(GPUdata + t), t, k);
-        }
-    }
+//    for (int t = 0; t < N; ++t) {
+//        for (int k = 0; k < 3; ++k) {
+//            WriteFile("file", *(data + t), t, k);
+//            WriteFile("GPUdata", *(GPUdata + t), t, k);
+//        }
+//    }
 
     cudaFree(GPUdata);
     delete[]data;
