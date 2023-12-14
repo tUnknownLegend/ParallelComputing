@@ -40,9 +40,9 @@ std::ostream &operator<<(std::ostream &str, const Body &b) {
     return str;
 }
 
-void WriteFile(const std::string &file, const Body *body, MyType t, int glob_i) {
+void WriteFile(const std::string &file, const Body &body, MyType t, int glob_i) {
     std::ofstream F(file + std::to_string(glob_i) + ".txt", std::ios::app);
-    F << std::setprecision(10) << body->m << " " << body->r[0] << " " << body->r[1] << " " << body->r[2]
+    F << std::setprecision(10) << body.m << " " << body.r[0] << " " << body.r[1] << " " << body.r[2]
       << std::endl;
     F.close();
     F.clear();
@@ -263,8 +263,8 @@ int main(int argc, char **argv) {
 
     for (size_t t = 0; t < N; ++t) {
         for (size_t k = 0; k < 3; ++k) {
-            WriteFile("file", data + t, t, k);
-            WriteFile("GPUdata", GPUdata + t, t, k);
+            WriteFile("file", *(data + t), t, k);
+//            WriteFile("GPUdata", GPUdata + t, t, k);
         }
     }
 
