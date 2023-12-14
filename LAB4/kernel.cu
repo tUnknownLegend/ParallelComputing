@@ -82,12 +82,12 @@ void solveNBodyRungeKutta2(DataType time_step, DataType end_time, int num_of_bod
     DataType *dev_mass, *dev_radius, *dev_velocity, *dev_acceleration;
     DataType *dev_radius_buffer, *dev_velocity_buffer;
 
-    cudaMalloc(&dev_mass, num_of_bodies * sizeof(DataType))
-    cudaMalloc(&dev_radius, num_of_bodies3 * sizeof(DataType))
-    cudaMalloc(&dev_velocity, num_of_bodies3 * sizeof(DataType))
-    cudaMalloc(&dev_acceleration, num_of_bodies3 * sizeof(DataType))
-    cudaMalloc(&dev_radius_buffer, num_of_bodies3 * sizeof(DataType))
-    cudaMalloc(&dev_velocity_buffer, num_of_bodies3 * sizeof(DataType))
+    cudaMalloc(&dev_mass, num_of_bodies * sizeof(DataType));
+    cudaMalloc(&dev_radius, num_of_bodies3 * sizeof(DataType));
+    cudaMalloc(&dev_velocity, num_of_bodies3 * sizeof(DataType));
+    cudaMalloc(&dev_acceleration, num_of_bodies3 * sizeof(DataType));
+    cudaMalloc(&dev_radius_buffer, num_of_bodies3 * sizeof(DataType));
+    cudaMalloc(&dev_velocity_buffer, num_of_bodies3 * sizeof(DataType));
 
     cudaMemcpy(dev_mass, weight.data(), num_of_bodies * sizeof(DataType), cudaMemcpyHostToDevice)
     cudaMemcpy(dev_radius, point.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice)
