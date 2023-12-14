@@ -282,11 +282,11 @@ int main(int argc, char** argv)
     
     cudaMemcpy(data, GPUdata, N * sizeof(Body), cudaMemcpyHostToDevice);
 
-    auto iterator = data;
-    while (iterator) {
-        std::cout << *iterator << "; ";
-        ++iterator;
-    }
+//    auto iterator = data;
+//    while (iterator) {
+//        std::cout << *iterator << "; ";
+//        ++iterator;
+//    }
 
     cudaFree(GPUdata);
     delete[]data;
