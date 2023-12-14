@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <omp.h>
 
-#define MyType float
+#define MyType double
 
 const int blockS = 512;
 
@@ -40,9 +40,10 @@ std::ostream &operator<<(std::ostream &str, const Body &b) {
     return str;
 }
 
-void WriteFile(const std::string &file, const MyType r[3], MyType t, int glob_i) {
+void WriteFile(const std::string &file, const Body *body, MyType t, int glob_i) {
     std::ofstream F(file + std::to_string(glob_i) + ".txt", std::ios::app);
-    F << std::setprecision(10) << t << " " << r[0] << " " << r[1] << " " << r[2] << std::endl;
+    F << std::setprecision(10) << &body->m << " " << &body->r[0] << " " << &body->r[1] << " " << &body->r[2]
+      << std::endl;
     F.close();
     F.clear();
 }
@@ -260,15 +261,10 @@ int main(int argc, char **argv) {
 
     cudaMemcpy(data, GPUdata, N * sizeof(Body), cudaMemcpyHostToDevice);
 
-//    auto iterator = data;
-//    while (iterator) {
-//        std::cout << *iterator << "; ";
-//        ++iterator;
-//    }
-
     for (size_t t = 0; t < N; ++t) {
         for (size_t k = 0; k < 3; ++k) {
-            WriteFile("file", data[t].r, t, k);
+            WriteFile("file", data + t, t, k);
+            WriteFile("GPUdata", GPUdata + t, t, k);
         }
     }
 
