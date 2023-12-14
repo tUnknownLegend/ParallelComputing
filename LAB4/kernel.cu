@@ -12,8 +12,6 @@ using DataType = float;
 const DataType G = 6.67e-11;
 const DataType eps = 1e-5;
 
-const std::string bodies_dir = "output/";
-
 __global__ void
 getAcceleration(int num_of_bodies, DataType *dev_mass, DataType *dev_radius, DataType *dev_acceleration) {
     int locIdx = threadIdx.x, globIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -101,7 +99,7 @@ void solveNBodyRungeKutta2(DataType time_step, DataType end_time, int num_of_bod
         int body3;
         for (int body = 0; body < num_of_bodies; ++body) {
             body3 = 3 * body;
-            files[body].open(bodies_dir + std::to_string(num_of_bodies) + "_Body_" + std::to_string(body + 1) + ".txt");
+            files[body].open(std::to_string(num_of_bodies) + "_Body_" + std::to_string(body + 1) + ".txt");
             files[body] << 0. << ' ' << point[body3 + 0] << ' ' << point[body3 + 1] << ' ' << point[body3 + 2]
                         << std::endl;
         }
