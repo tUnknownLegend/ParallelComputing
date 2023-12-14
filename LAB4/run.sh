@@ -1,5 +1,5 @@
-rm file*
-
+rm file*.txt
+rm GPUdata*.txt
 #!/bin/sh
 #SBATCH --job-name=Sukhova_Pinevich
 #SBATCH --time=00:05:00
