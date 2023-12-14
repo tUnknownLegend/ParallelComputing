@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
     for (int t = 0; t < N; ++t) {
         for (int k = 0; k < 3; ++k) {
             WriteFile("file", *(data + t), t, k);
-            WriteFile("GPUdata", GPUdata + t, t, k);
+            WriteFile("GPUdata", *(GPUdata + t), t, k);
         }
     }
 
