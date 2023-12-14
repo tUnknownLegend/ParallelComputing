@@ -203,14 +203,13 @@ int main(int argc, char **argv) {
     std::string file_path = "Input.txt";
     std::vector <DataType> weight, point, velocity;
     int num_of_bodies = getBodyData(weight, point, velocity, file_path);
-    if (!num_of_bodies)
-        return 1;
+    assert(num_of_bodies >= 4);
 
     DataType time_step = 0.01;
     DataType end_time = 5.;
     int save_frequency = 10;
     bool do_time_output = 1;
-    bool do_file_output = 0;
+    bool do_file_output = 1;
     solveNBodyRungeKutta2(time_step, end_time, num_of_bodies, weight, point, velocity, save_frequency, do_time_output,
                           do_file_output);
     return 0;
