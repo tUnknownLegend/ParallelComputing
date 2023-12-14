@@ -189,7 +189,7 @@ int main(int argc, char** argv)
 {
     size_t block = 512; // Размер блока
 
-    size_t N = 100000; // Количество тел
+    size_t N = 4; // Количество тел
     
     MyType tau = 1e-1; // Шаг по времени
 
