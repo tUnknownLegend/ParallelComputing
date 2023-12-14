@@ -266,7 +266,7 @@ int main(int argc, char **argv) {
 //        ++iterator;
 //    }
 
-    for (size_t t = 1; t <= Nt; ++t) {
+    for (size_t t = 0; t < N; ++t) {
         for (size_t k = 0; k < 3; ++k) {
             WriteFile("file", data[t].r, t, k);
         }
