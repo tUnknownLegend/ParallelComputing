@@ -14,8 +14,6 @@
 
 #define MyType double
 
-const int blockS = 512;
-
 struct Body // Структура "тело"
 {
     MyType m;    // Масса
@@ -54,10 +52,10 @@ __device__ inline MyType My_norm_vec(const MyType *r) {
 }
 
 // Вычисление ускорения
-__device__ void My_a(MyType *a, const size_t N, const MyType *r, const int glob_i, const Body *data, MyType G) {
+__device__ void My_a(MyType *a, const int N, const MyType *r, const int glob_i, const Body *data, MyType G) {
     MyType buf[3] = {0.0, 0.0, 0.0};
 
-    for (size_t k = 0; k < 3; ++k)
+    for (int k = 0; k < 3; ++k)
         a[k] = 0.0;
 
     MyType coefN = 1.0;
@@ -75,13 +73,13 @@ __device__ void My_a(MyType *a, const size_t N, const MyType *r, const int glob_
 
         __syncthreads();
 
-        for (size_t j = 0; j < blockDim.x; ++j) {
+        for (int j = 0; j < blockDim.x; ++j) {
             if (glob_i == blockDim.x * k + j)
                 continue;
 
             dob4 = SharedBlock[j];
 
-            // for (size_t k = 0; k < 3; ++k)
+            // for (int k = 0; k < 3; ++k)
             // buf[k] = bod_j[k] - r[k];
 
             buf[0] = dob4.x - r[0];
@@ -97,7 +95,7 @@ __device__ void My_a(MyType *a, const size_t N, const MyType *r, const int glob_
             coefN = __fdividef(rsqrtf(coefN), coefN) * dob4.w;
 
 #pragma unroll
-            for (size_t k = 0; k < 3; ++k) {
+            for (int k = 0; k < 3; ++k) {
                 a[k] += coefN * buf[k];
             }
 
@@ -108,7 +106,7 @@ __device__ void My_a(MyType *a, const size_t N, const MyType *r, const int glob_
     }
 
 #pragma unroll
-    for (size_t k = 0; k < 3; ++k) {
+    for (int k = 0; k < 3; ++k) {
         a[k] *= G;
     }
 }
@@ -118,8 +116,8 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
 
     MyType tn = 1.0; // Конечный момент времени
 
-    size_t Nt = round(tn / tau);       // Количество шагов по времени
-    size_t tf = round(timeStep / tau); // Коэффициент пропорциональности шагов
+    int Nt = round(tn / tau);       // Количество шагов по времени
+    int tf = round(timeStep / tau); // Коэффициент пропорциональности шагов
 
     const MyType G = 6.67e-11; // Гравитационная постоянная
 
@@ -143,11 +141,11 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
 
     if (glob_i < N)
 
-        for (size_t t = 1; t <= Nt; ++t) {
+        for (int t = 1; t <= Nt; ++t) {
             buf = bod_i;
             My_a(w, N, bod_i.r, glob_i, data, G);
 
-            for (size_t k = 0; k < 3; ++k)
+            for (int k = 0; k < 3; ++k)
                 buf.r[k] += tau * bod_i.v[k];
 
             data[glob_i] = buf;
@@ -156,7 +154,7 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
 
             My_a(a, N, buf.r, glob_i, data, G);
 
-            for (size_t k = 0; k < 3; ++k) {
+            for (int k = 0; k < 3; ++k) {
                 bod_i.r[k] += tau * (bod_i.v[k] + 0.5 * tau * w[k]);
                 bod_i.v[k] += 0.5 * tau * (w[k] + a[k]);
             }
@@ -173,11 +171,11 @@ __global__ void simulate(int N, Body *data, MyType tau, int flagF) {
 }
 
 int main(int argc, char **argv) {
-    size_t block = 512; // Размер блока
+    int block = 128; // Размер блока
 
-    size_t N = 4; // Количество тел
+    int N = 4; // Количество тел
 
-    MyType tau = 1e-1; // Шаг по времени
+    MyType tau = 0.02; // Шаг по времени
 
     int flagInitData = 1; // != 0 - считывать из файла, 0 - заполнять случайно
     int flagF = 1;        // != 0 - записывать в файлы, 0 - нет
@@ -206,7 +204,7 @@ int main(int argc, char **argv) {
 
         data = new Body[N]; // Массив "тел"
 
-        for (size_t i = 0; i < N; ++i)
+        for (int i = 0; i < N; ++i)
             F >> data[i].m >> data[i].r[0] >> data[i].r[1] >> data[i].r[2] >> data[i].v[0] >> data[i].v[1]
               >> data[i].v[2];
 
@@ -214,10 +212,10 @@ int main(int argc, char **argv) {
     } else {
         data = new Body[N]; // Массив "тел"
 
-        for (size_t i = 0; i < N; ++i) {
+        for (int i = 0; i < N; ++i) {
             data[i].m = mL + dis(gen) * (mR - mL);
 
-            for (size_t k = 0; k < 3; ++k) {
+            for (int k = 0; k < 3; ++k) {
                 data[i].r[k] = rL + dis(gen) * (rR - rL);
                 data[i].v[k] = vL + dis(gen) * (vR - vL);
             }
@@ -241,7 +239,7 @@ int main(int argc, char **argv) {
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
 
-    size_t blockCount = 0;
+    int blockCount = 0;
 
     if (N < block) {
         simulate<<<1, N>>>(N, GPUdata, tau, flagF);
@@ -261,8 +259,8 @@ int main(int argc, char **argv) {
 
     cudaMemcpy(data, GPUdata, N * sizeof(Body), cudaMemcpyHostToDevice);
 
-    for (size_t t = 0; t < N; ++t) {
-        for (size_t k = 0; k < 3; ++k) {
+    for (int t = 0; t < N; ++t) {
+        for (int k = 0; k < 3; ++k) {
             WriteFile("file", *(data + t), t, k);
 //            WriteFile("GPUdata", GPUdata + t, t, k);
         }
