@@ -1,3 +1,5 @@
+rm file*
+
 #!/bin/sh
 #SBATCH --job-name=Sukhova_Pinevich
 #SBATCH --time=00:05:00
