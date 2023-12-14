@@ -7,7 +7,7 @@
 #include "device_launch_parameters.h"
 
 const int BLOCK_SIZE = 128;
-using DataType = double;
+using DataType = float;
 
 const DataType G = 6.67e-11;
 const DataType eps = 1e-5;
