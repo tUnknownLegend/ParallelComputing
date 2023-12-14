@@ -92,13 +92,13 @@ int main(int argc, char** argv) {
     mytype half_tau = tau / 2;
     double t = 0.0;
 
-    // if (NeedWriteToFile) {
-    // for (int i = 0; i < size; ++i) {
-    // ClearFile(to_string(i + 1) + output_file_name);
-    // WriteToFile(output_file_name, t, i, coord[3 * i], coord[3 * i + 1], coord[3 * i + 2]);
-    // }
+    if (NeedWriteToFile) {
+        for (int i = 0; i < size; ++i) {
+            ClearFile(to_string(i + 1) + output_file_name);
+            WriteToFile(output_file_name, t, i, coord[3 * i], coord[3 * i + 1], coord[3 * i + 2]);
+        }
 
-    // }
+    }
     double temp = 1.0;
 
     cudaEvent_t start, stop;
