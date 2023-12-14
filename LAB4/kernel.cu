@@ -12,7 +12,7 @@ using DataType = float;
 const DataType G = 6.67e-11;
 const DataType eps = 1e-5;
 
-const std::string bodies_dir = "./output/";
+const std::string bodies_dir = "output/";
 
 __global__ void
 getAcceleration(int num_of_bodies, DataType *dev_mass, DataType *dev_radius, DataType *dev_acceleration) {
