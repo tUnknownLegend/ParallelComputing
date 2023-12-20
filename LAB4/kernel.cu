@@ -35,7 +35,10 @@ struct Body // Структура "тело"
 
 // Перегрузка оператора вывода для структуры "тело"
 std::ostream &operator<<(std::ostream &str, const Body &b) {
-    str << std::setprecision(10) << b.position[0] << " " << b.position[1] << " " << b.position[2] << std::endl;
+    for (int i = 0; i < 3; ++i) {
+        str << std::setprecision(10) << b.position[i] << "; ";
+    }
+    str << "\n";
 
     return str;
 }
@@ -48,16 +51,16 @@ void WriteFile(const std::string &file, const MyType position[3], MyType t, int 
 }
 
 // Модуль вектора
-__device__ inline MyType My_norm_vec(const MyType *position) {
+__device__ inline MyType calcNormOfVector(const MyType *position) {
     return position[0] * position[0] + position[1] * position[1] + position[2] * position[2];
 }
 
 // Вычисление ускорения
-__device__ void My_a(MyType *a, const size_t N, const MyType *position, const int glob_i, const Body *data, MyType G) {
+__device__ void
+calcAcceleration(MyType *a, const size_t N, const MyType *position, const int glob_i, const Body *data, MyType G) {
     MyType buf[3] = {0.0, 0.0, 0.0};
 
-    for (size_t k = 0; k < 3; ++k)
-        a[k] = 0.0;
+    cudaMemset(a, 0, 3 * sizeof(MyType));
 
     MyType coefN = 1.0;
 
@@ -80,18 +83,11 @@ __device__ void My_a(MyType *a, const size_t N, const MyType *position, const in
 
             dob4 = SharedBlock[j];
 
-            // for (size_t k = 0; k < 3; ++k)
-            // buf[k] = bod_j[k] - position[k];
-
             buf[0] = dob4.x - position[0];
             buf[1] = dob4.y - position[1];
             buf[2] = dob4.z - position[2];
 
-            coefN = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2]; //My_norm_vec(buf);
-
-            //coefN *= sqrtf(coefN);
-
-            // coefN *= coefN * coefN;
+            coefN = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2]; //calcNormOfVector(buf);
 
             coefN = __fdividef(rsqrtf(coefN), coefN) * dob4.w;
 
@@ -99,8 +95,6 @@ __device__ void My_a(MyType *a, const size_t N, const MyType *position, const in
             for (size_t k = 0; k < 3; ++k) {
                 a[k] += coefN * buf[k];
             }
-
-
         }
 
         __syncthreads();
@@ -152,7 +146,7 @@ __global__  void simulate(int N, Body *data, MyType tau, int flagF) {
 
         for (size_t t = 1; t <= Nt; ++t) {
             buf = bod_i;
-            My_a(w, N, bod_i.position, glob_i, data, G);
+            calcAcceleration(w, N, bod_i.position, glob_i, data, G);
 
             for (size_t k = 0; k < 3; ++k)
                 buf.position[k] += tau * bod_i.velocity[k];
@@ -161,7 +155,7 @@ __global__  void simulate(int N, Body *data, MyType tau, int flagF) {
 
             __syncthreads();
 
-            My_a(a, N, buf.position, glob_i, data, G);
+            calcAcceleration(a, N, buf.position, glob_i, data, G);
 
             for (size_t k = 0; k < 3; ++k) {
                 bod_i.position[k] += tau * (bod_i.velocity[k] + 0.5 * tau * w[k]);
