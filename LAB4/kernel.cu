@@ -56,7 +56,7 @@ __device__ void
 calcAcceleration(MyType *a, const size_t N, const MyType *position, const int glob_i, const Body *data, MyType G) {
     MyType buf[3] = {0.0, 0.0, 0.0};
 
-    cudaMemset(a, 0, 3 * sizeof(MyType));
+    memset(a, 0, 3 * sizeof(MyType));
 
     MyType coefN = 1.0;
 
