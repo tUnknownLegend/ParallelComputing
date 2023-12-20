@@ -15,8 +15,6 @@
 
 #define MyType float
 
-const int blockS = 256;
-
 struct Body // Структура "тело"
 {
     MyType weight;    // Масса
