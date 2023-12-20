@@ -11,6 +11,7 @@
 #include <random>
 #include <iomanip>
 #include <omp.h>
+#include <utility>
 
 #define MyType float
 
@@ -180,13 +181,13 @@ int main(int argc, char **argv) {
     int flagF = 1;        // != 0 - записывать в файлы, 0 - нет
 
     // границы значения масс
-    const pair<MyType, MyType> weightBounds{1e+9, 1e+10};
+    const std::pair<MyType, MyType> weightBounds{1e+9, 1e+10};
 
     // границы значения координат
-    const pair<MyType, MyType> positionBounds{1e+9, 1e+10};
+    const std::pair<MyType, MyType> positionBounds{1e+9, 1e+10};
 
     // границы значения скоростей
-    const pair<MyType, MyType> velocityBounds{1e+9, 1e+10};
+    const std::pair<MyType, MyType> velocityBounds{1e+9, 1e+10};
 
     Body *data; // Массив "тел"
 
