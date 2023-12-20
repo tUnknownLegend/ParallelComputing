@@ -1,216 +1,267 @@
+#include <cuda_runtime.h>
+#include "device_launch_parameters.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
+#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <random>
+#include <iomanip>
+#include <omp.h>
 
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#define MyType float
 
-const int BLOCK_SIZE = 128;
-using DataType = float;
+const int blockS = 512;
 
-const DataType G = 6.67e-11;
-const DataType eps = 1e-5;
+struct Body // Структура "тело"
+{
+    MyType m;    // Масса
+    MyType r[3]; // Координаты
+    MyType v[3]; // Скорости
 
-__global__ void
-getAcceleration(int num_of_bodies, DataType *dev_mass, DataType *dev_radius, DataType *dev_acceleration) {
-    int locIdx = threadIdx.x, globIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    int locIdx3 = 3 * locIdx, globIdx3 = 3 * globIdx;
+    // Перегрузка оператора присваивания
+    __device__ __host__ Body &operator=(const Body &p) {
+        m = p.m;
+        for (int i = 0; i < 3; ++i) {
+            r[i] = p.r[i];
+            v[i] = p.v[i];
+        }
+        return *this;
+    }
+};
 
-    __shared__ DataType shared_mass[BLOCK_SIZE], shared_radius[3 * BLOCK_SIZE];
+// Перегрузка оператора вывода для структуры "тело"
+std::ostream &operator<<(std::ostream &str, const Body &b) {
+    str << std::setprecision(10) << b.r[0] << " " << b.r[1] << " " << b.r[2] << std::endl;
 
-    DataType r_x = dev_radius[globIdx3], r_y = dev_radius[globIdx3 + 1], r_z = dev_radius[globIdx3 + 2];
-    DataType a_x = 0., a_y = 0., a_z = 0.;
-    DataType diff_x, diff_y, diff_z;
-    DataType distance, fraction;
-    int thread3;
-    for (int block_start = 0; block_start < num_of_bodies; block_start += BLOCK_SIZE) {
-        shared_mass[locIdx] = dev_mass[locIdx + block_start];
-        for (int ax = 0; ax < 3; ++ax)
-            shared_radius[locIdx3 + ax] = dev_radius[(block_start + locIdx) * 3 + ax];
+    return str;
+}
+
+void WriteFile(const std::string &file, const MyType r[3], MyType t, int glob_i) {
+    std::ofstream F(file + std::to_string(glob_i) + ".txt", std::ios::app);
+    F << std::setprecision(10) << t << " " << r[0] << " " << r[1] << " " << r[2] << std::endl;
+    F.close();
+    F.clear();
+}
+
+// Модуль вектора
+__device__ inline MyType My_norm_vec(const MyType *r) {
+    return r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
+}
+
+// Вычисление ускорения
+__device__ void My_a(MyType *a, const size_t N, const MyType *r, const int glob_i, const Body *data, MyType G) {
+    MyType buf[3] = {0.0, 0.0, 0.0};
+
+    for (size_t k = 0; k < 3; ++k)
+        a[k] = 0.0;
+
+    MyType coefN = 1.0;
+
+    Body bod_j;
+
+    float4 dob4;
+
+    __shared__ float4 SharedBlock[512];
+
+    for (int k = 0; k < N / blockDim.x; ++k) {
+        bod_j = data[blockDim.x * k + threadIdx.x];
+
+        SharedBlock[threadIdx.x] = make_float4(bod_j.r[0], bod_j.r[1], bod_j.r[2], bod_j.m);
+
         __syncthreads();
 
-        for (int thread = 0; thread < BLOCK_SIZE; ++thread) {
-            thread3 = 3 * thread;
-            if (block_start + thread < num_of_bodies) {
-                diff_x = r_x - shared_radius[thread3];
-                diff_y = r_y - shared_radius[thread3 + 1];
-                diff_z = r_z - shared_radius[thread3 + 2];
+        for (size_t j = 0; j < blockDim.x; ++j) {
+            if (glob_i == blockDim.x * k + j)
+                continue;
 
-                distance = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
-                distance *= __fsqrt_rd(distance);
-                fraction = __fdividef(shared_mass[thread], fmaxf(distance, eps));
+            dob4 = SharedBlock[j];
 
-                a_x += diff_x * fraction;
-                a_y += diff_y * fraction;
-                a_z += diff_z * fraction;
+            // for (size_t k = 0; k < 3; ++k)
+            // buf[k] = bod_j[k] - r[k];
+
+            buf[0] = dob4.x - r[0];
+            buf[1] = dob4.y - r[1];
+            buf[2] = dob4.z - r[2];
+
+            coefN = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2]; //My_norm_vec(buf);
+
+            //coefN *= sqrtf(coefN);
+
+            // coefN *= coefN * coefN;
+
+            coefN = __fdividef(rsqrtf(coefN), coefN) * dob4.w;
+
+#pragma unroll
+            for (size_t k = 0; k < 3; ++k) {
+                a[k] += coefN * buf[k];
             }
+
+
+        }
+
+        __syncthreads();
+    }
+
+#pragma unroll
+    for (size_t k = 0; k < 3; ++k) {
+        a[k] *= G;
+    }
+}
+
+__global__  void simulate(int N, Body *data, MyType tau, int flagF) {
+    MyType timeStep = 1e-1;  // Шаг записи в файлы
+
+    MyType tn = 20.0; // Конечный момент времени
+
+    size_t Nt = round(tn / tau);       // Количество шагов по времени
+    size_t tf = round(timeStep / tau); // Коэффициент пропорциональности шагов
+
+    const MyType G = 6.67e-11; // Гравитационная постоянная
+
+    int glob_i = blockIdx.x * blockDim.x + threadIdx.x; // Текущий номер
+
+    //std::ofstream F("Body_" + std::to_string(glob_i) + ".txt"); // Файл выходных данных
+    //std::ofstream F("Body.txt", std::ios::app); // Файл выходных данных
+
+    Body bod_i = data[glob_i]; // Текущее тело
+
+    //F << 0.0 << " " << bod_i;
+
+    MyType a[3] = {0.0, 0.0, 0.0}; // Текущие ускорения
+    MyType w[3] = {0.0, 0.0, 0.0}; // Начальные ускорения
+
+    Body buf;
+
+    // Body* globData = new Body[N];
+
+    // Расчётная схема
+
+    if (glob_i < N)
+
+        for (size_t t = 1; t <= Nt; ++t) {
+            buf = bod_i;
+            My_a(w, N, bod_i.r, glob_i, data, G);
+
+            for (size_t k = 0; k < 3; ++k)
+                buf.r[k] += tau * bod_i.v[k];
+
+            data[glob_i] = buf;
+
             __syncthreads();
-        }
-    }
 
-    if (globIdx < num_of_bodies) {
-        dev_acceleration[globIdx3] = -G * a_x;
-        dev_acceleration[globIdx3 + 1] = -G * a_y;
-        dev_acceleration[globIdx3 + 2] = -G * a_z;
-    }
-}
+            My_a(a, N, buf.r, glob_i, data, G);
 
-__global__ void
-calcRungeKuttaStep(int num_of_bodies, DataType *next_y, DataType *y, DataType *deriv_y, DataType time_step) {
-    int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
-    int globIdx3 = 3 * globIdx;
-    if (globIdx < num_of_bodies) {
-        for (int ax = 0; ax < 3; ax++) {
-            next_y[globIdx3 + ax] = y[globIdx3 + ax] + time_step * deriv_y[3 * globIdx + ax];
-        }
-    }
-}
-
-void printBodyPosition(DataType time, int body, const std::vector <DataType> &point) {
-    int body3 = 3 * body;
-    std::cout << time << ' ' << point[body3 + 0] << ' ' << point[body3 + 1] << ' ' << point[body3 + 2] << std::endl;
-}
-
-void solveNBodyRungeKutta2(DataType time_step, DataType end_time, int num_of_bodies, \
-    std::vector <DataType> &weight, std::vector <DataType> &point, std::vector <DataType> &velocity, \
-    int save_frequency = 10, bool do_time_output = 1, bool do_file_output = 0) {
-    int num_of_bodies3 = 3 * num_of_bodies;
-
-    DataType *dev_mass, *dev_radius, *dev_velocity, *dev_acceleration;
-    DataType *dev_radius_buffer, *dev_velocity_buffer;
-
-    cudaMalloc(&dev_mass, num_of_bodies * sizeof(DataType));
-    cudaMalloc(&dev_radius, num_of_bodies3 * sizeof(DataType));
-    cudaMalloc(&dev_velocity, num_of_bodies3 * sizeof(DataType));
-    cudaMalloc(&dev_acceleration, num_of_bodies3 * sizeof(DataType));
-    cudaMalloc(&dev_radius_buffer, num_of_bodies3 * sizeof(DataType));
-    cudaMalloc(&dev_velocity_buffer, num_of_bodies3 * sizeof(DataType));
-
-    cudaMemcpy(dev_mass, weight.data(), num_of_bodies * sizeof(DataType), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_radius, point.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_velocity, velocity.data(), num_of_bodies3 * sizeof(DataType), cudaMemcpyHostToDevice);
-
-    int num_of_blocks = (num_of_bodies + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    int threads_per_block = BLOCK_SIZE;
-
-    std::vector <std::ofstream> files(num_of_bodies);
-    if (do_file_output) {
-        int body3;
-        for (int body = 0; body < num_of_bodies; ++body) {
-            body3 = 3 * body;
-            files[body].open(std::to_string(num_of_bodies) + "_Body_" + std::to_string(body + 1) + ".txt");
-            files[body] << 0. << ' ' << point[body3 + 0] << ' ' << point[body3 + 1] << ' ' << point[body3 + 2]
-                        << std::endl;
-        }
-    }
-
-    cudaEvent_t start, finish, prev_iter, iter;
-    cudaEventCreate(&finish);
-    cudaEventCreate(&iter);
-    cudaEventCreate(&start);
-    cudaEventCreate(&prev_iter);
-    cudaEventRecord(start);
-    cudaEventRecord(prev_iter);
-    cudaEventSynchronize(start);
-    cudaEventSynchronize(prev_iter);
-    DataType iter_time;
-    int last_step = std::ceil(end_time / time_step);
-    for (int step = 1; step < last_step + 1; ++step) {
-        getAcceleration<<<num_of_blocks, threads_per_block>>>(num_of_bodies, dev_mass, dev_radius, dev_acceleration);
-        calcRungeKuttaStep<<<num_of_blocks, threads_per_block>>>(num_of_bodies, dev_radius_buffer, dev_radius,
-                                                                 dev_velocity, 0.5 * time_step);
-        calcRungeKuttaStep<<<num_of_blocks, threads_per_block>>>(num_of_bodies, dev_velocity_buffer, dev_velocity,
-                                                                 dev_acceleration, 0.5 * time_step);
-
-        getAcceleration<<<num_of_blocks, threads_per_block>>>(num_of_bodies, dev_mass, dev_radius_buffer,
-                                                              dev_acceleration);
-        calcRungeKuttaStep<<<num_of_blocks, threads_per_block>>>(num_of_bodies, dev_radius, dev_radius,
-                                                                 dev_velocity_buffer, time_step);
-        calcRungeKuttaStep<<<num_of_blocks, threads_per_block>>>(num_of_bodies, dev_velocity, dev_velocity,
-                                                                 dev_acceleration, time_step);
-
-        if (step % save_frequency == 0) {
-            if (do_time_output) {
-                cudaEventRecord(iter);
-                cudaEventSynchronize(iter);
-                cudaEventElapsedTime(&iter_time, prev_iter, iter);
-                printf("Iter time = %f\n", iter_time / (save_frequency * 1000.));
-                cudaEventRecord(prev_iter);
-                cudaEventSynchronize(prev_iter);
+            for (size_t k = 0; k < 3; ++k) {
+                bod_i.r[k] += tau * (bod_i.v[k] + 0.5 * tau * w[k]);
+                bod_i.v[k] += 0.5 * tau * (w[k] + a[k]);
             }
-            if (do_file_output) {
-                if (cudaSuccess !=
-                    cudaMemcpy(point.data(), dev_radius, num_of_bodies3 * sizeof(DataType), cudaMemcpyDeviceToHost))
-                    printf("Error in cudaMemcpy from Dev to Host!\n");
-                DataType curr_time = step * time_step;
-                int body3;
-                for (int body = 0; body < num_of_bodies; ++body) {
-                    body3 = 3 * body;
-                    files[body] << curr_time << ' ' << point[body3 + 0] << ' ' << point[body3 + 1] << ' '
-                                << point[body3 + 2] << std::endl;
-                }
-            }
+
+            data[glob_i] = bod_i;
+
+            __syncthreads();
+
+            //if (t % tf == 0 && flagF)
+            // F << t * tau << " " << bod_i;
         }
-    }
-    cudaEventRecord(finish);
-    cudaEventSynchronize(finish);
 
-    DataType calc_time;
-    cudaEventElapsedTime(&calc_time, start, finish);
-    printf("Total time = %f\n", calc_time / 1000.);
-    cudaEventDestroy(start);
-    cudaEventDestroy(finish);
-    cudaEventDestroy(prev_iter);
-    cudaEventDestroy(iter);
-
-    if (do_file_output)
-        for (size_t body = 0; body < num_of_bodies; ++body)
-            files[body].close();
-
-    cudaFree(dev_mass);
-    cudaFree(dev_radius);
-    cudaFree(dev_velocity);
-    cudaFree(dev_acceleration);
-    cudaFree(dev_radius_buffer);
-    cudaFree(dev_velocity_buffer);
-}
-
-int getBodyData(std::vector <DataType> &weight, std::vector <DataType> &point, std::vector <DataType> &velocity, \
-     const std::string &file_path) {
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-        std::cout << "Could not open the file!" << std::endl;
-        return 0;
-    }
-    int num_of_bodies;
-    file >> num_of_bodies;
-    weight.resize(num_of_bodies);
-    point.resize(3 * num_of_bodies);
-    velocity.resize(3 * num_of_bodies);
-    int body3;
-    for (int body = 0; body < num_of_bodies; ++body) {
-        body3 = body * 3;
-        file >> weight[body]
-             >> point[body3] >> point[body3 + 1] >> point[body3 + 2]
-             >> velocity[body3] >> velocity[body3 + 1] >> velocity[body3 + 2];
-    }
-    file.close();
-    return num_of_bodies;
+    //F.close();
 }
 
 int main(int argc, char **argv) {
-    std::string file_path = "Input.txt";
-    std::vector <DataType> weight, point, velocity;
-    int num_of_bodies = getBodyData(weight, point, velocity, file_path);
-    assert(num_of_bodies >= 4);
+    size_t block = 512; // Размер блока
 
-    DataType time_step = 0.01;
-    DataType end_time = 5.;
-    int save_frequency = 10;
-    bool do_time_output = 1;
-    bool do_file_output = 1;
-    solveNBodyRungeKutta2(time_step, end_time, num_of_bodies, weight, point, velocity, save_frequency, do_time_output,
-                          do_file_output);
+    size_t N = 4; // Количество тел
+
+    MyType tau = 1e-1; // Шаг по времени
+
+    int flagInitData = 1; // != 0 - считывать из файла, 0 - заполнять случайно
+    int flagF = 1;        // != 0 - записывать в файлы, 0 - нет
+
+    MyType mL = 1e+9;  // Нижняя и верхняя
+    MyType mR = 1e+10; // границы значения масс
+
+    MyType rL = -1.0;  // Нижняя и верхняя
+    MyType rR = 1.0;   // границы значения координат
+
+    MyType vL = -1.0;  // Нижняя и верхняя
+    MyType vR = 1.0;   // границы значения скоростей
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::uniform_real_distribution<MyType> dis(0.0, 1.0); // Случайные числа от 0 до 1
+
+
+    Body *data; // Массив "тел"
+
+    if (flagInitData) {
+        std::ifstream F("Input.txt"); // Файл входных данных
+
+        F >> N; // Количество тел
+
+        data = new Body[N]; // Массив "тел"
+
+        for (size_t i = 0; i < N; ++i)
+            F >> data[i].m >> data[i].r[0] >> data[i].r[1] >> data[i].r[2] >> data[i].v[0] >> data[i].v[1]
+              >> data[i].v[2];
+
+        F.close();
+    } else {
+        data = new Body[N]; // Массив "тел"
+
+        for (size_t i = 0; i < N; ++i) {
+            data[i].m = mL + dis(gen) * (mR - mL);
+
+            for (size_t k = 0; k < 3; ++k) {
+                data[i].r[k] = rL + dis(gen) * (rR - rL);
+                data[i].v[k] = vL + dis(gen) * (vR - vL);
+            }
+        }
+    }
+
+    std::cout << "N = " << N << std::endl;
+    std::cout << "tau = " << tau << std::endl;
+
+    Body *GPUdata;
+
+    // Копирование массива data в видеокарты
+    cudaMalloc((void **) &GPUdata, N * sizeof(Body));
+    cudaMemcpy(GPUdata, data, N * sizeof(Body), cudaMemcpyHostToDevice);
+
+    // Обработчик событий
+    cudaEvent_t start, stop;
+    float time = 0.0;
+
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, 0);
+
+    size_t blockCount = 0;
+
+    if (N < block) {
+        simulate<<<1, N>>>(N, GPUdata, tau, flagF);
+    } else {
+        blockCount = N / block + N % block;
+        simulate<<<blockCount, block>>>(N, GPUdata, tau, flagF);
+    }
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&time, start, stop);
+
+    std::cout << "time = " << time / 1000.0 << std::endl << std::endl;
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    cudaMemcpy(data, GPUdata, N * sizeof(Body), cudaMemcpyHostToDevice);
+
+    cudaFree(GPUdata);
+    delete[]data;
+
     return 0;
 }
