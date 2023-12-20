@@ -50,11 +50,6 @@ void WriteFile(const std::string &file, const MyType position[3], MyType t, int 
     F.clear();
 }
 
-// Модуль вектора
-__device__ inline MyType calcNormOfVector(const MyType *position) {
-    return position[0] * position[0] + position[1] * position[1] + position[2] * position[2];
-}
-
 // Вычисление ускорения
 __device__ void
 calcAcceleration(MyType *a, const size_t N, const MyType *position, const int glob_i, const Body *data, MyType G) {
@@ -87,7 +82,8 @@ calcAcceleration(MyType *a, const size_t N, const MyType *position, const int gl
             buf[1] = dob4.y - position[1];
             buf[2] = dob4.z - position[2];
 
-            coefN = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2]; //calcNormOfVector(buf);
+            //  calcNormOfVector(buf);
+            coefN = buf[0] * buf[0] + buf[1] * buf[1] + buf[2] * buf[2];
 
             coefN = __fdividef(rsqrtf(coefN), coefN) * dob4.w;
 
