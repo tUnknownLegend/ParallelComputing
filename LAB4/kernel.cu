@@ -11,8 +11,8 @@
 
 using namespace std;
 
-bool f1 = true;
-bool f2 = true;
+bool is4BodyInput = true;
+bool doOutput = true;
 
 
 #define blocksize 32
@@ -23,7 +23,7 @@ const TYPE eps = 1e-6;
 
 void readFromFile(vector<TYPE> &M, vector<TYPE> &R, vector<TYPE> &V, int &N) {
     std::string filename;
-    if (f1) {
+    if (is4BodyInput) {
         filename = "4Body.txt";
     } else {
         filename = "10KBody.txt";
@@ -118,7 +118,7 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     ofstream *F = NULL;
 
 
-    if (f2) {
+    if (doOutput) {
         F = new ofstream[N];
         for (int i = 0; i < N; ++i) {
             F[i].open(to_string(num) + "_Body_" + to_string(i + 1) + ".txt");
@@ -165,7 +165,7 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
         RKstep<<<blocks, threads>>>(dev_V, dev_KA2, tau, dev_V, N);
 
         if (i % forPrint == 0) {
-            if (f2) {
+            if (doOutput) {
                 TYPE current_time = tau * i;
                 cudaMemcpy(R.data(), dev_R, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
                 for (int i = 0; i < N; ++i) {
@@ -185,7 +185,7 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     cudaEventDestroy(finish);
 
 
-    if (f2)
+    if (doOutput)
         for (int i = 0; i < N; ++i)
             F[i].close();
 
