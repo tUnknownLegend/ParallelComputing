@@ -43,7 +43,8 @@ void readFromFile(int &N, vector<TYPE> &weight, vector<TYPE> &position, vector<T
     file.close();
 }
 
-__global__ void calcAcceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev_KV, TYPE *dev_KA, int N) {
+__global__ void
+calcAcceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev_KV, TYPE *dev_KA, int N) {
     int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
     int locIdx = threadIdx.x;
     int globIdx3 = 3 * globIdx, locIdx3 = 3 * locIdx;
@@ -63,7 +64,6 @@ __global__ void calcAcceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cud
 
         __syncthreads();
 
-#pragma unroll
         for (int j = 0; j < blockSize; ++j) {
             if (i + j < N) {
                 d0 = r0 - sharedR[3 * j];
@@ -113,7 +113,8 @@ __global__ void multAdd(TYPE *v0, TYPE *v1, TYPE tau, TYPE *result, int N) {
 }
 
 
-void RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vector<TYPE> &velocity, TYPE tau, TYPE T, int N) {
+void
+RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vector<TYPE> &velocity, TYPE tau, TYPE T, int N) {
     const int N3 = 3 * N;
     ofstream *F = nullptr;
 
@@ -121,7 +122,8 @@ void RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vecto
         F = new ofstream[N];
         for (int i = 0; i < N; ++i) {
             F[i].open(to_string(N) + "_Body_" + to_string(i + 1) + ".txt");
-            F[i] << 0. << " " << position[3 * i + 0] << " " << position[3 * i + 1] << " " << position[3 * i + 2] << endl;
+            F[i] << 0. << " " << position[3 * i + 0] << " " << position[3 * i + 1] << " " << position[3 * i + 2]
+                 << endl;
         }
     }
 
@@ -146,11 +148,11 @@ void RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vecto
     TYPE *dev_KA2;
     cudaMalloc(&dev_KA2, N3 * sizeof(TYPE));
 
-    TYPE *dev_tempR;
-    cudaMalloc(&dev_tempR, N3 * sizeof(TYPE));
+    TYPE *dev_tempPosition;
+    cudaMalloc(&dev_tempPosition, N3 * sizeof(TYPE));
 
-    TYPE *dev_tempV;
-    cudaMalloc(&dev_tempV, N3 * sizeof(TYPE));
+    TYPE *dev_tempVelocity;
+    cudaMalloc(&dev_tempVelocity, N3 * sizeof(TYPE));
 
     cudaMemcpy(cudaWeight, weight.data(), N * sizeof(TYPE), cudaMemcpyHostToDevice);
     cudaMemcpy(cudaPosition, position.data(), N3 * sizeof(TYPE), cudaMemcpyHostToDevice);
@@ -169,13 +171,13 @@ void RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vecto
     TYPE halfOfTau = tau / 2;
     dim3 blocks = ((N + blockSize - 1) / blockSize);
     dim3 threads(blockSize);
-    
+
     for (int i = 1; i <= timeSteps; ++i) {
         calcAcceleration <<<blocks, threads>>>(cudaWeight, cudaPosition, cudaVelocity, dev_KV1, dev_KA1, N);
-        multAdd<<<blocks, threads>>>(cudaPosition, dev_KV1, halfOfTau, dev_tempR, N);
-        multAdd<<<blocks, threads>>>(cudaVelocity, dev_KA1, halfOfTau, dev_tempV, N);
+        multAdd<<<blocks, threads>>>(cudaPosition, dev_KV1, halfOfTau, dev_tempPosition, N);
+        multAdd<<<blocks, threads>>>(cudaVelocity, dev_KA1, halfOfTau, dev_tempVelocity, N);
 
-        calcAcceleration <<<blocks, threads>>>(cudaWeight, dev_tempR, dev_tempV, dev_KV2, dev_KA2, N);
+        calcAcceleration <<<blocks, threads>>>(cudaWeight, dev_tempPosition, dev_tempVelocity, dev_KV2, dev_KA2, N);
         multAdd<<<blocks, threads>>>(cudaPosition, dev_KV2, tau, cudaPosition, N);
         multAdd<<<blocks, threads>>>(cudaVelocity, dev_KA2, tau, cudaVelocity, N);
 
@@ -184,7 +186,8 @@ void RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vecto
                 TYPE current_time = tau * i;
                 cudaMemcpy(position.data(), cudaPosition, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
                 for (int i = 0; i < N; ++i) {
-                    F[i] << current_time << " " << position[3 * i + 0] << " " << position[3 * i + 1] << " " << position[3 * i + 2] << endl;
+                    F[i] << current_time << " " << position[3 * i + 0] << " " << position[3 * i + 1] << " "
+                         << position[3 * i + 2] << endl;
                 }
             }
         }
@@ -212,8 +215,8 @@ void RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vecto
     cudaFree(dev_KV2);
     cudaFree(dev_KA1);
     cudaFree(dev_KA2);
-    cudaFree(dev_tempR);
-    cudaFree(dev_tempV);
+    cudaFree(dev_tempPosition);
+    cudaFree(dev_tempVelocity);
 
     printf("Time = %f\n", dt / 1000.0);
 }
