@@ -179,14 +179,12 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
         RKstep<<<blocks, threads>>>(cudaPosition, cudaKVelocity2, tau, cudaPosition, N);
         RKstep<<<blocks, threads>>>(cudaVelocity, dev_KA2, tau, cudaVelocity, N);
 
-        if (i % forPrint == 0) {
-            if (doOutput) {
-                TYPE current_time = tau * i;
-                cudaMemcpy(R.data(), cudaPosition, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
-                for (int i = 0; i < N; ++i) {
-                    F[i] << current_time << " " << std::setprecision(16) << R[3 * i + 0] << " " << R[3 * i + 1] << " "
-                         << R[3 * i + 2] << endl;
-                }
+        if (doOutput && i % forPrint == 0) {
+            TYPE current_time = tau * i;
+            cudaMemcpy(R.data(), cudaPosition, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
+            for (int i = 0; i < N; ++i) {
+                F[i] << current_time << " " << std::setprecision(16) << R[3 * i + 0] << " " << R[3 * i + 1] << " "
+                     << R[3 * i + 2] << endl;
             }
         }
     }
