@@ -20,28 +20,30 @@ const bool doOutputToFile = true;
 const TYPE G = 6.67e-11;
 const TYPE eps = 1e-6;
 
-void readFromFile(vector<TYPE>& M, vector<TYPE>& R, vector<TYPE>& V, int& N) {
-    std::string filename;
+void readFromFile(int &N, vector<TYPE> &weight, vector<TYPE> &position, vector<TYPE> &velocity) {
+    string filename;
     if (is4BodyInput) {
         filename = "4Body.txt";
-    }
-    else {
+    } else {
         filename = "10KBody.txt";
     }
     ifstream file;
     file.open(filename);
 
     file >> N;
-    M.resize(N); R.resize(N * 3); V.resize(N * 3);
+    weight.resize(N);
+    position.resize(N * 3);
+    velocity.resize(N * 3);
 
     for (int i = 0; i < N; ++i) {
-        file >> M[i] >> R[3 * i] >> R[3 * i + 1] >> R[3 * i + 2] >> V[3 * i] >> V[3 * i + 1] >> V[3 * i + 2];
+        file >> weight[i] >> position[3 * i] >> position[3 * i + 1] >> position[3 * i + 2] >> velocity[3 * i]
+             >> velocity[3 * i + 1] >> velocity[3 * i + 2];
     }
 
     file.close();
 }
 
-__global__ void calcAcceleration(TYPE* dev_M, TYPE* dev_R, TYPE* dev_V, TYPE* dev_KV, TYPE* dev_KA, int N) {
+__global__ void calcAcceleration(TYPE *dev_M, TYPE *dev_R, TYPE *dev_V, TYPE *dev_KV, TYPE *dev_KA, int N) {
     int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
     int locIdx = threadIdx.x;
     int globIdx3 = 3 * globIdx, locIdx3 = 3 * locIdx;
@@ -61,7 +63,7 @@ __global__ void calcAcceleration(TYPE* dev_M, TYPE* dev_R, TYPE* dev_V, TYPE* de
 
         __syncthreads();
 
-        #pragma unroll
+#pragma unroll
         for (int j = 0; j < blockSize; ++j) {
             if (i + j < N) {
                 d0 = r0 - sharedR[3 * j];
@@ -74,14 +76,14 @@ __global__ void calcAcceleration(TYPE* dev_M, TYPE* dev_R, TYPE* dev_V, TYPE* de
                 norm *= __fsqrt_rd(norm);
 
                 //znam = sharedM[j] / fmax(norm, eps);
-                znam =  __fdividef(sharedM[j], fmaxf(norm, eps));
+                znam = __fdividef(sharedM[j], fmaxf(norm, eps));
 
                 a0 += d0 * znam;
                 a1 += d1 * znam;
                 a2 += d2 * znam;
             }
 
-        __syncthreads();
+            __syncthreads();
 
         }
 
@@ -100,8 +102,7 @@ __global__ void calcAcceleration(TYPE* dev_M, TYPE* dev_R, TYPE* dev_V, TYPE* de
 }
 
 
-
-__global__ void multAdd(TYPE* v0, TYPE* v1, TYPE tau, TYPE* result, int N) {
+__global__ void multAdd(TYPE *v0, TYPE *v1, TYPE tau, TYPE *result, int N) {
     int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
 
     if (globIdx < N) {
@@ -112,23 +113,23 @@ __global__ void multAdd(TYPE* v0, TYPE* v1, TYPE tau, TYPE* result, int N) {
 }
 
 
-void RungeKutta2(const vector<TYPE>& M, vector<TYPE>& R, const vector<TYPE>& V, TYPE tau, TYPE T, int N) {
+void RungeKutta2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau, TYPE T, int N) {
 
     int N3 = 3 * N;
 
-    ofstream* F = NULL;
+    ofstream *F = NULL;
 
 
-      if (doOutputToFile) {
-      F = new ofstream[N];
-            for (int i = 0; i < N; ++i) {
-                F[i].open(to_string(N) + "_Body_" + to_string(i + 1) + ".txt");
-                F[i] << 0. <<  " " << R[3*i + 0] << " " << R[3*i + 1] << " " << R[3*i + 2] << endl;
-            }
+    if (doOutputToFile) {
+        F = new ofstream[N];
+        for (int i = 0; i < N; ++i) {
+            F[i].open(to_string(N) + "_Body_" + to_string(i + 1) + ".txt");
+            F[i] << 0. << " " << R[3 * i + 0] << " " << R[3 * i + 1] << " " << R[3 * i + 2] << endl;
         }
+    }
 
     TYPE *dev_M, *dev_R, *dev_V, *dev_KV1, *dev_KV2, *dev_KA1, *dev_KA2, *dev_tempR, *dev_tempV;
-    TYPE tau2 = tau / 2 ;
+    TYPE tau2 = tau / 2;
 
     dim3 blocks = ((N + blockSize - 1) / blockSize);
     dim3 threads(blockSize);
@@ -166,13 +167,13 @@ void RungeKutta2(const vector<TYPE>& M, vector<TYPE>& R, const vector<TYPE>& V, 
         multAdd<<<blocks, threads>>>(dev_V, dev_KA2, tau, dev_V, N);
 
         if (i % forPrint == 0) {
-                        if (doOutputToFile) {
-                        TYPE current_time = tau *i;
-                     cudaMemcpy(R.data(), dev_R, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
-                    for (int i = 0; i < N; ++i) {
-                        F[i] << current_time << " " << R[3*i+0] << " " << R[3*i+1] << " " << R[3*i+2] << endl;
-                    }
+            if (doOutputToFile) {
+                TYPE current_time = tau * i;
+                cudaMemcpy(R.data(), dev_R, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
+                for (int i = 0; i < N; ++i) {
+                    F[i] << current_time << " " << R[3 * i + 0] << " " << R[3 * i + 1] << " " << R[3 * i + 2] << endl;
                 }
+            }
         }
     }
 
@@ -185,9 +186,9 @@ void RungeKutta2(const vector<TYPE>& M, vector<TYPE>& R, const vector<TYPE>& V, 
     cudaEventDestroy(finish);
 
 
-     if (doOutputToFile)
-            for (int i = 0; i < N; ++i)
-                F[i].close();
+    if (doOutputToFile)
+        for (int i = 0; i < N; ++i)
+            F[i].close();
 
     cudaFree(dev_M);
     cudaFree(dev_R);
@@ -199,24 +200,27 @@ void RungeKutta2(const vector<TYPE>& M, vector<TYPE>& R, const vector<TYPE>& V, 
     cudaFree(dev_tempR);
     cudaFree(dev_tempV);
 
-    printf("Time = %f\n", dt/1000.0);
+    printf("Time = %f\n", dt / 1000.0);
 }
 
 
-int main(int argc, char** argv) {
-    int N; TYPE T, countstep = 10.0, tau = 1e-3;
-    vector<TYPE> rad, mas, vel;
-    readFromFile(mas, rad, vel, N);
+int main() {
+    int N;
+    TYPE T;
+    TYPE countStep = 10.0;
+    TYPE tau = 1e-3;
+    vector<TYPE> weight;
+    vector<TYPE> position;
+    vector<TYPE> velocity;
+    readFromFile(N, weight, position, velocity);
 
     if (is4BodyInput) {
         T = 20.0;
-    }
-    else {
-        T = countstep * tau;
+    } else {
+        T = countStep * tau;
     }
 
     RungeKutta2(mas, rad, vel, tau, T, N);
-
 
     return 0;
 }
