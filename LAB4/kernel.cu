@@ -111,12 +111,8 @@ __global__ void RKstep(TYPE *y0, TYPE *y1, TYPE tau, TYPE *result, int N) {
 
 
 void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau, TYPE T, int N, int num) {
-
     int N3 = 3 * N;
-
-    ofstream *F = NULL;
-
-
+    ofstream *F = nullptr;
     if (doOutput) {
         F = new ofstream[N];
         for (int i = 0; i < N; ++i) {
@@ -198,9 +194,11 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     cudaEventDestroy(finish);
 
 
-    if (doOutput)
-        for (int i = 0; i < N; ++i)
+    if (doOutput) {
+        for (int i = 0; i < N; ++i) {
             F[i].close();
+        }
+    }
 
     cudaFree(cudaWeight);
     cudaFree(cudaPosition);
