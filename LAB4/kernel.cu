@@ -51,31 +51,28 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
     int globIdx3 = 3 * globIdx;
     int locIdx3 = 3 * locIdx;
 
-    __shared__ TYPE sharedM[blockSize], sharedR[3 * blockSize];
+    __shared__ TYPE sharedWeight[blockSize], sharedPosition[3 * blockSize];
 
     TYPE diff0, diff1, diff2, norm, mul, a0 = 0.0, a1 = 0.0, a2 = 0.0;
 
-    TYPE r0 = cudaPosition[globIdx3], r1 = cudaPosition[globIdx3 + 1], r2 = cudaPosition[globIdx3 + 2];
-
-
     for (int i = 0; i < N; i += blockSize) {
-        sharedM[locIdx] = cudaWeight[i + locIdx];
-        sharedR[locIdx3] = cudaPosition[3 * (i + locIdx)];
-        sharedR[locIdx3 + 1] = cudaPosition[3 * (i + locIdx) + 1];
-        sharedR[locIdx3 + 2] = cudaPosition[3 * (i + locIdx) + 2];
+        sharedWeight[locIdx] = cudaWeight[i + locIdx];
+        sharedPosition[locIdx3] = cudaPosition[3 * (i + locIdx)];
+        sharedPosition[locIdx3 + 1] = cudaPosition[3 * (i + locIdx) + 1];
+        sharedPosition[locIdx3 + 2] = cudaPosition[3 * (i + locIdx) + 2];
 
         __syncthreads();
 
 #pragma unroll
         for (int j = 0; j < N - i; ++j) {
-            diff0 = r0 - sharedR[3 * j];
-            diff1 = r1 - sharedR[3 * j + 1];
-            diff2 = r2 - sharedR[3 * j + 2];
+            diff0 = cudaPosition[globIdx3] - sharedPosition[3 * j];
+            diff1 = cudaPosition[globIdx3 + 1] - sharedPosition[3 * j + 1];
+            diff2 = cudaPosition[globIdx3 + 2] - sharedPosition[3 * j + 2];
 
             norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
-            mul = sharedM[j] / fmax(norm * __fsqrt_rn(norm), eps);
-            //mul =  __fdividef(sharedM[j], fmaxf(norm, eps));
+            mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
+            //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
 
             a0 += diff0 * mul;
             a1 += diff1 * mul;
