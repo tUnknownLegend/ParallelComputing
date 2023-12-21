@@ -148,11 +148,11 @@ RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vector<TYP
     TYPE *dev_KA2;
     cudaMalloc(&dev_KA2, N3 * sizeof(TYPE));
 
-    TYPE *dev_tempPosition;
-    cudaMalloc(&dev_tempPosition, N3 * sizeof(TYPE));
+    TYPE *tempCudaPosition;
+    cudaMalloc(&tempCudaPosition, N3 * sizeof(TYPE));
 
-    TYPE *dev_tempVelocity;
-    cudaMalloc(&dev_tempVelocity, N3 * sizeof(TYPE));
+    TYPE *tempCudaVelocity;
+    cudaMalloc(&tempCudaVelocity, N3 * sizeof(TYPE));
 
     cudaMemcpy(cudaWeight, weight.data(), N * sizeof(TYPE), cudaMemcpyHostToDevice);
     cudaMemcpy(cudaPosition, position.data(), N3 * sizeof(TYPE), cudaMemcpyHostToDevice);
@@ -174,10 +174,10 @@ RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vector<TYP
 
     for (int i = 1; i <= timeSteps; ++i) {
         calcAcceleration <<<blocks, threads>>>(cudaWeight, cudaPosition, cudaVelocity, dev_KV1, dev_KA1, N);
-        multAdd<<<blocks, threads>>>(cudaPosition, dev_KV1, halfOfTau, dev_tempPosition, N);
-        multAdd<<<blocks, threads>>>(cudaVelocity, dev_KA1, halfOfTau, dev_tempVelocity, N);
+        multAdd<<<blocks, threads>>>(cudaPosition, dev_KV1, halfOfTau, tempCudaPosition, N);
+        multAdd<<<blocks, threads>>>(cudaVelocity, dev_KA1, halfOfTau, tempCudaVelocity, N);
 
-        calcAcceleration <<<blocks, threads>>>(cudaWeight, dev_tempPosition, dev_tempVelocity, dev_KV2, dev_KA2, N);
+        calcAcceleration <<<blocks, threads>>>(cudaWeight, tempCudaPosition, tempCudaVelocity, dev_KV2, dev_KA2, N);
         multAdd<<<blocks, threads>>>(cudaPosition, dev_KV2, tau, cudaPosition, N);
         multAdd<<<blocks, threads>>>(cudaVelocity, dev_KA2, tau, cudaVelocity, N);
 
@@ -215,8 +215,8 @@ RungeKutta2(const vector<TYPE> &weight, vector<TYPE> &position, const vector<TYP
     cudaFree(dev_KV2);
     cudaFree(dev_KA1);
     cudaFree(dev_KA2);
-    cudaFree(dev_tempPosition);
-    cudaFree(dev_tempVelocity);
+    cudaFree(tempCudaPosition);
+    cudaFree(tempCudaVelocity);
 
     printf("Time = %f\n", dt / 1000.0);
 }
