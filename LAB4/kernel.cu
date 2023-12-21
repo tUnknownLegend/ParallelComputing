@@ -238,7 +238,7 @@ int main() {
         T = countStep * tau;
     }
 
-    RungeKutta2(weigth, position, velocity, T, N);
+    RungeKutta2(weigth, position, velocity, tau, T, N);
 
     return 0;
 }
