@@ -207,11 +207,12 @@ int main() {
     int N;
     TYPE T;
     TYPE countStep = 10.0;
-    TYPE tau = 1e-3; // step
+    const int num = 4;
+    TYPE tau = num * 1e-3; // step
     vector<TYPE> weight;
     vector<TYPE> position;
     vector<TYPE> velocity;
-    readFromFile(N, weight, position, velocity);
+    readFromFile(weight, position, velocity, N);
 
     if (is4BodyInput) {
         T = 20.0;
@@ -219,7 +220,7 @@ int main() {
         T = countStep * tau;
     }
 
-    RungeKutta2(weight, position, velocity, tau, T, N);
+    RK2(weight, position, velocity, tau, T, N, num);
 
     return 0;
 }
