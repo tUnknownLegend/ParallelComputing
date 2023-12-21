@@ -55,6 +55,8 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
     TYPE diff0, diff1, diff2, norm, mul, a0 = 0.0, a1 = 0.0, a2 = 0.0;
 
+    TYPE r0 = dev_R[globIdx3], r1 = dev_R[globIdx3 + 1], r2 = dev_R[globIdx3 + 2];
+
     for (int i = 0; i < N; i += blockSize) {
         sharedWeight[locIdx] = cudaWeight[i + locIdx];
         sharedPosition[locIdx3] = cudaPosition[3 * (i + locIdx)];
@@ -65,21 +67,21 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
 #pragma unroll
         for (int j = 0; j < N - i; ++j) {
-            diff0 = cudaPosition[globIdx3] - sharedPosition[3 * j];
-            diff1 = cudaPosition[globIdx3 + 1] - sharedPosition[3 * j + 1];
-            diff2 = cudaPosition[globIdx3 + 2] - sharedPosition[3 * j + 2];
+            if (i + j < N) {
+                diff0 = cudaPosition[globIdx3] - sharedPosition[3 * j];
+                diff1 = cudaPosition[globIdx3 + 1] - sharedPosition[3 * j + 1];
+                diff2 = cudaPosition[globIdx3 + 2] - sharedPosition[3 * j + 2];
 
-            norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
+                norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
-            mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
-            //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
+                mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
+                //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
 
-            a0 += diff0 * mul;
-            a1 += diff1 * mul;
-            a2 += diff2 * mul;
-
+                a0 += diff0 * mul;
+                a1 += diff1 * mul;
+                a2 += diff2 * mul;
+            }
             __syncthreads();
-
         }
     }
 
