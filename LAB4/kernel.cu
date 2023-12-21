@@ -15,7 +15,7 @@ bool is4BodyInput = true;
 bool doOutput = true;
 
 
-#define blockSize 32
+#define blockSize 128
 #define TYPE double
 
 const TYPE G = 6.67e-11;
@@ -44,7 +44,8 @@ void readFromFile(vector<TYPE> &weight, vector<TYPE> &position, vector<TYPE> &ve
     file.close();
 }
 
-__global__ void acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev_KV, TYPE *dev_KA, int N) {
+__global__ void
+acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev_KV, TYPE *dev_KA, int N) {
     int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
     int locIdx = threadIdx.x;
     int globIdx3 = 3 * globIdx;
@@ -73,10 +74,7 @@ __global__ void acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVel
 
             norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
-            norm *= sqrt(norm);
-            //norm *= __fsqrt_rn(norm);
-
-            mul = sharedM[j] / fmax(norm, eps);
+            mul = sharedM[j] / fmax(norm * __fsqrt_rn(norm), eps);
             //mul =  __fdividef(sharedM[j], fmaxf(norm, eps));
 
             a0 += diff0 * mul;
@@ -134,28 +132,28 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
 
     TYPE *cudaWeight;
     cudaMalloc(&cudaWeight, N * sizeof(TYPE));
-    
+
     TYPE *cudaPosition;
     cudaMalloc(&cudaPosition, N3 * sizeof(TYPE));
-    
+
     TYPE *cudaVelocity;
     cudaMalloc(&cudaVelocity, N3 * sizeof(TYPE));
-    
+
     TYPE *cudaKVelocity1;
     cudaMalloc(&cudaKVelocity1, N3 * sizeof(TYPE));
-    
+
     TYPE *cudaKVelocity2;
     cudaMalloc(&cudaKVelocity2, N3 * sizeof(TYPE));
-    
+
     TYPE *dev_KA1;
     cudaMalloc(&dev_KA1, N3 * sizeof(TYPE));
-    
+
     TYPE *dev_KA2;
     cudaMalloc(&dev_KA2, N3 * sizeof(TYPE));
-    
+
     TYPE *cudaTempPosition;
     cudaMalloc(&cudaTempPosition, N3 * sizeof(TYPE));
-    
+
     TYPE *cudaTempVelocity;
     cudaMalloc(&cudaTempVelocity, N3 * sizeof(TYPE));
 
@@ -217,7 +215,6 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     cudaFree(cudaTempVelocity);
 
     printf("Time = %f\n", dt / (timeSteps * 1000.0));
-    //printf("ALlTime = %f\n", dt/1000.0);
 }
 
 int main() {
