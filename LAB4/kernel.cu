@@ -75,7 +75,7 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
                 norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
-                mul = sharedWeight[j] / fmax(norm * sqrt(norm), eps);
+                mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
                 //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
 
                 a0 += diff0 * mul;
