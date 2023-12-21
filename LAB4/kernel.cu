@@ -55,7 +55,7 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
     TYPE diff0, diff1, diff2, norm, mul, a0 = 0.0, a1 = 0.0, a2 = 0.0;
 
-    TYPE r0 = dev_R[globIdx3], r1 = dev_R[globIdx3 + 1], r2 = dev_R[globIdx3 + 2];
+//    TYPE r0 = cudaPosition[globIdx3], r1 = cudaPosition[globIdx3 + 1], r2 = cudaPosition[globIdx3 + 2];
 
     for (int i = 0; i < N; i += blockSize) {
         sharedWeight[locIdx] = cudaWeight[i + locIdx];
