@@ -55,7 +55,8 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
     TYPE diff0, diff1, diff2, norm, mul, a0 = 0.0, a1 = 0.0, a2 = 0.0;
 
-    TYPE r0 = cudaPosition[globIdx3], r1 = cudaPosition[globIdx3 + 1], r2 = cudaPosition[globIdx3 + 2];
+    TYPE position0 = cudaPosition[globIdx3], position1 = cudaPosition[globIdx3 + 1], position2 = cudaPosition[globIdx3 +
+                                                                                                              2];
 
     for (int i = 0; i < N; i += blockSize) {
         sharedWeight[locIdx] = cudaWeight[i + locIdx];
@@ -67,12 +68,9 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
 #pragma unroll
         for (int j = 0; j < N - i; ++j) {
-//                diff0 = cudaPosition[globIdx3] - sharedPosition[3 * j];
-            diff0 = r0 - sharedPosition[3 * j];
-//                diff1 = cudaPosition[globIdx3 + 1] - sharedPosition[3 * j + 1];
-            diff1 = r1 - sharedPosition[3 * j + 1];
-//                diff2 = cudaPosition[globIdx3 + 2] - sharedPosition[3 * j + 2];
-            diff2 = r2 - sharedPosition[3 * j + 2];
+            diff0 = position0 - sharedPosition[3 * j];
+            diff1 = position1 - sharedPosition[3 * j + 1];
+            diff2 = position2 - sharedPosition[3 * j + 2];
 
             norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
