@@ -68,19 +68,20 @@ acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev
 
 #pragma unroll
         for (int j = 0; j < N - i; ++j) {
-            diff0 = position0 - sharedPosition[3 * j];
-            diff1 = position1 - sharedPosition[3 * j + 1];
-            diff2 = position2 - sharedPosition[3 * j + 2];
+            if (i + j < N) {
+                diff0 = position0 - sharedPosition[3 * j];
+                diff1 = position1 - sharedPosition[3 * j + 1];
+                diff2 = position2 - sharedPosition[3 * j + 2];
 
-            norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
+                norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
-            mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
-            //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
+                mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
+                //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
 
-            a0 += diff0 * mul;
-            a1 += diff1 * mul;
-            a2 += diff2 * mul;
-
+                a0 += diff0 * mul;
+                a1 += diff1 * mul;
+                a2 += diff2 * mul;
+            }
             __syncthreads();
         }
     }
