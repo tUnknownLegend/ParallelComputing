@@ -132,7 +132,7 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     dim3 blocks = ((N + blockSize - 1) / blockSize);
     dim3 threads(blockSize);
 
-    TYPE *cudaWeight
+    TYPE *cudaWeight;
     cudaMalloc(&cudaWeight, N * sizeof(TYPE));
     
     TYPE *cudaPosition;
