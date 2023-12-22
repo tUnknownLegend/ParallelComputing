@@ -156,7 +156,7 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     int forPrint = round(1 / (10 * tau));
 
     for (int i = 1; i <= timesteps; ++i) {
-        acceleration <<<blocks, threads>>>(dev_M, dev_R, dev_V, dev_KV1, dev_KA1, N, tau2, dev_tempRm,
+        acceleration <<<blocks, threads>>>(dev_M, dev_R, dev_V, dev_KV1, dev_KA1, N, tau2, dev_tempR,
                                            dev_tempV);
 //        RKstep<<<blocks, threads>>>(dev_R, dev_KV1, tau2, dev_tempR, N);
 //        RKstep<<<blocks, threads>>>(dev_V, dev_KA1, tau2, dev_tempV, N);
