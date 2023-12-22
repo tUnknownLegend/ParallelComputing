@@ -11,109 +11,114 @@
 
 using namespace std;
 
-bool is4BodyInput = true;
-bool doOutput = true;
+bool f1 = true;
+bool f2 = true;
 
 
-#define blockSize 128
+#define blocksize 128
 #define TYPE double
 
 const TYPE G = 6.67e-11;
 const TYPE eps = 1e-6;
 
-void readFromFile(vector<TYPE> &weight, vector<TYPE> &position, vector<TYPE> &velocity, int &N) {
-    string filename;
-    if (is4BodyInput) {
+void readFromFile(vector<TYPE> &M, vector<TYPE> &R, vector<TYPE> &V, int &N) {
+    std::string filename;
+    if (f1) {
         filename = "4Body.txt";
     } else {
-        filename = "10KBody.txt";
+        filename = "20480Body.txt";
     }
     ifstream file;
     file.open(filename);
 
     file >> N;
-    weight.resize(N);
-    position.resize(N * 3);
-    velocity.resize(N * 3);
+    M.resize(N);
+    R.resize(N * 3);
+    V.resize(N * 3);
 
     for (int i = 0; i < N; ++i) {
-        file >> weight[i] >> position[3 * i] >> position[3 * i + 1] >> position[3 * i + 2] >> velocity[3 * i]
-             >> velocity[3 * i + 1] >> velocity[3 * i + 2];
+        file >> M[i] >> R[3 * i] >> R[3 * i + 1] >> R[3 * i + 2] >> V[3 * i] >> V[3 * i + 1] >> V[3 * i + 2];
     }
 
     file.close();
 }
 
 __global__ void
-acceleration(TYPE *cudaWeight, TYPE *cudaPosition, TYPE *cudaVelocity, TYPE *dev_KV, TYPE *dev_KA, int N) {
+acceleration(TYPE *dev_M, TYPE *dev_R, TYPE *dev_V, TYPE *dev_KV, TYPE *dev_KA, int N, int tau, TYPE *dev_tempR,
+             YPE *dev_tempV) {
     int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
     int locIdx = threadIdx.x;
     int globIdx3 = 3 * globIdx;
     int locIdx3 = 3 * locIdx;
 
-    __shared__ TYPE sharedWeight[blockSize], sharedPosition[3 * blockSize];
+    __shared__ TYPE sharedM[blocksize], sharedR[3 * blocksize];
 
-    TYPE diff0, diff1, diff2, norm, mul, a0 = 0.0, a1 = 0.0, a2 = 0.0;
+    TYPE diff0, diff1, diff2, norm, mul, a0 = 0, a1 = 0, a2 = 0;
 
-    TYPE position0 = cudaPosition[globIdx3], position1 = cudaPosition[globIdx3 + 1], position2 = cudaPosition[globIdx3 +
-                                                                                                              2];
+    TYPE r0 = dev_R[globIdx3], r1 = dev_R[globIdx3 + 1], r2 = dev_R[globIdx3 + 2];
 
-    for (int i = 0; i < N; i += blockSize) {
-        sharedWeight[locIdx] = cudaWeight[i + locIdx];
-        sharedPosition[locIdx3] = cudaPosition[3 * (i + locIdx)];
-        sharedPosition[locIdx3 + 1] = cudaPosition[3 * (i + locIdx) + 1];
-        sharedPosition[locIdx3 + 2] = cudaPosition[3 * (i + locIdx) + 2];
+
+    for (int i = 0; i < N; i += blocksize) {
+        sharedM[locIdx] = dev_M[i + locIdx];
+        sharedR[locIdx3 + 0] = dev_R[3 * (i + locIdx) + 0];
+        sharedR[locIdx3 + 1] = dev_R[3 * (i + locIdx) + 1];
+        sharedR[locIdx3 + 2] = dev_R[3 * (i + locIdx) + 2];
 
         __syncthreads();
 
 #pragma unroll
-        for (int j = 0; j < N - i; ++j) {
+        for (int j = 0; j < blocksize; ++j) {
             if (i + j < N) {
-                diff0 = position0 - sharedPosition[3 * j];
-                diff1 = position1 - sharedPosition[3 * j + 1];
-                diff2 = position2 - sharedPosition[3 * j + 2];
+                diff0 = r0 - sharedR[3 * j];
+                diff1 = r1 - sharedR[3 * j + 1];
+                diff2 = r2 - sharedR[3 * j + 2];
 
                 norm = diff0 * diff0 + diff1 * diff1 + diff2 * diff2;
 
-                mul = sharedWeight[j] / fmax(norm * __fsqrt_rn(norm), eps);
-                //mul =  __fdividef(sharedWeight[j], fmax(norm * __fsqrt_rn(norm), eps));
+                norm *= sqrt(norm);
+                //norm *= sqrtf(norm);
+
+                mul = sharedM[j] / fmax(norm, eps);
+                //mul =  __fdividef(sharedM[j], fmaxf(norm, eps));
 
                 a0 += diff0 * mul;
                 a1 += diff1 * mul;
                 a2 += diff2 * mul;
             }
+
             __syncthreads();
+
         }
+
     }
 
     if (globIdx < N) {
-        dev_KV[globIdx3] = cudaVelocity[globIdx3];
-        dev_KV[globIdx3 + 1] = cudaVelocity[globIdx3 + 1];
-        dev_KV[globIdx3 + 2] = cudaVelocity[globIdx3 + 2];
+        dev_KV[globIdx3] = dev_V[globIdx3];
+        dev_KV[globIdx3 + 1] = dev_V[globIdx3 + 1];
+        dev_KV[globIdx3 + 2] = dev_V[globIdx3 + 2];
 
         dev_KA[globIdx3] = -G * a0;
         dev_KA[globIdx3 + 1] = -G * a1;
         dev_KA[globIdx3 + 2] = -G * a2;
     }
 
-}
-
-
-__global__ void RKstep(TYPE *y0, TYPE *y1, TYPE tau, TYPE *result, int N) {
-    int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
-    int globIdx3 = 3 * globIdx;
     if (globIdx < N) {
         for (int i = 0; i < 3; i++) {
-            result[globIdx3 + i] = y0[globIdx3 + i] + tau * y1[globIdx3 + i];
+            dev_tempR[globIdx3 + i] = dev_R[globIdx3 + i] + tau * dev_KV[globIdx3 + i];
+            dev_tempV[globIdx3 + i] = dev_V[globIdx3 + i] + tau * dev_KA[globIdx3 + i];
         }
     }
 }
 
 
 void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau, TYPE T, int N, int num) {
+
     int N3 = 3 * N;
-    ofstream *F = nullptr;
-    if (doOutput) {
+
+    ofstream *F = NULL;
+
+
+    if (f2) {
         F = new ofstream[N];
         for (int i = 0; i < N; ++i) {
             F[i].open(to_string(num) + "_Body_" + to_string(i + 1) + ".txt");
@@ -121,41 +126,25 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
         }
     }
 
-    TYPE halfOfTau = tau / 2; // half of step
+    TYPE *dev_M, *dev_R, *dev_V, *dev_KV1, *dev_KV2, *dev_KA1, *dev_KA2, *dev_tempR, *dev_tempV;
+    TYPE tau2 = (TYPE) (0.5) * tau;
 
-    dim3 blocks = ((N + blockSize - 1) / blockSize);
-    dim3 threads(blockSize);
+    dim3 blocks = ((N + blocksize - 1) / blocksize);
+    dim3 threads(blocksize);
 
-    TYPE *cudaWeight;
-    cudaMalloc(&cudaWeight, N * sizeof(TYPE));
-
-    TYPE *cudaPosition;
-    cudaMalloc(&cudaPosition, N3 * sizeof(TYPE));
-
-    TYPE *cudaVelocity;
-    cudaMalloc(&cudaVelocity, N3 * sizeof(TYPE));
-
-    TYPE *cudaKVelocity1;
-    cudaMalloc(&cudaKVelocity1, N3 * sizeof(TYPE));
-
-    TYPE *cudaKVelocity2;
-    cudaMalloc(&cudaKVelocity2, N3 * sizeof(TYPE));
-
-    TYPE *dev_KA1;
+    cudaMalloc(&dev_M, N * sizeof(TYPE));
+    cudaMalloc(&dev_R, N3 * sizeof(TYPE));
+    cudaMalloc(&dev_V, N3 * sizeof(TYPE));
+    cudaMalloc(&dev_KV1, N3 * sizeof(TYPE));
+    cudaMalloc(&dev_KV2, N3 * sizeof(TYPE));
     cudaMalloc(&dev_KA1, N3 * sizeof(TYPE));
-
-    TYPE *dev_KA2;
     cudaMalloc(&dev_KA2, N3 * sizeof(TYPE));
+    cudaMalloc(&dev_tempR, N3 * sizeof(TYPE));
+    cudaMalloc(&dev_tempV, N3 * sizeof(TYPE));
 
-    TYPE *cudaTempPosition;
-    cudaMalloc(&cudaTempPosition, N3 * sizeof(TYPE));
-
-    TYPE *cudaTempVelocity;
-    cudaMalloc(&cudaTempVelocity, N3 * sizeof(TYPE));
-
-    cudaMemcpy(cudaWeight, M.data(), N * sizeof(TYPE), cudaMemcpyHostToDevice);
-    cudaMemcpy(cudaPosition, R.data(), N3 * sizeof(TYPE), cudaMemcpyHostToDevice);
-    cudaMemcpy(cudaVelocity, V.data(), N3 * sizeof(TYPE), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_M, M.data(), N * sizeof(TYPE), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_R, R.data(), N3 * sizeof(TYPE), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_V, V.data(), N3 * sizeof(TYPE), cudaMemcpyHostToDevice);
 
     cudaEvent_t start, finish;
     cudaEventCreate(&start);
@@ -163,24 +152,27 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     cudaEventRecord(start);
     cudaEventSynchronize(start);
 
-    int timeSteps = round(T / tau);
+    int timesteps = round(T / tau);
     int forPrint = round(1 / (10 * tau));
 
-    for (int i = 1; i <= timeSteps; ++i) {
-        acceleration <<<blocks, threads>>>(cudaWeight, cudaPosition, cudaVelocity, cudaKVelocity1, dev_KA1, N);
-        RKstep<<<blocks, threads>>>(cudaPosition, cudaKVelocity1, halfOfTau, cudaTempPosition, N);
-        RKstep<<<blocks, threads>>>(cudaVelocity, dev_KA1, halfOfTau, cudaTempVelocity, N);
+    for (int i = 1; i <= timesteps; ++i) {
+        acceleration <<<blocks, threads>>>(dev_M, dev_R, dev_V, dev_KV1, dev_KA1, N, tau2, dev_tempRm,
+                                           dev_tempV);
+//        RKstep<<<blocks, threads>>>(dev_R, dev_KV1, tau2, dev_tempR, N);
+//        RKstep<<<blocks, threads>>>(dev_V, dev_KA1, tau2, dev_tempV, N);
 
-        acceleration <<<blocks, threads>>>(cudaWeight, cudaTempPosition, cudaTempVelocity, cudaKVelocity2, dev_KA2, N);
-        RKstep<<<blocks, threads>>>(cudaPosition, cudaKVelocity2, tau, cudaPosition, N);
-        RKstep<<<blocks, threads>>>(cudaVelocity, dev_KA2, tau, cudaVelocity, N);
+        acceleration <<<blocks, threads>>>(dev_M, dev_tempR, dev_tempV, dev_KV2, dev_KA2, N, tau, dev_R, dev_V);
+//        RKstep<<<blocks, threads>>>(dev_R, dev_KV2, tau, dev_R, N);
+//        RKstep<<<blocks, threads>>>(dev_V, dev_KA2, tau, dev_V, N);
 
-        if (doOutput && i % forPrint == 0) {
-            TYPE current_time = tau * i;
-            cudaMemcpy(R.data(), cudaPosition, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
-            for (int i = 0; i < N; ++i) {
-                F[i] << current_time << " " << std::setprecision(16) << R[3 * i + 0] << " " << R[3 * i + 1] << " "
-                     << R[3 * i + 2] << endl;
+        if (i % forPrint == 0) {
+            if (f2) {
+                TYPE current_time = tau * i;
+                cudaMemcpy(R.data(), dev_R, N3 * sizeof(TYPE), cudaMemcpyDeviceToHost);
+                for (int i = 0; i < N; ++i) {
+                    F[i] << current_time << " " << std::setprecision(16) << R[3 * i + 0] << " " << R[3 * i + 1] << " "
+                         << R[3 * i + 2] << endl;
+                }
             }
         }
     }
@@ -194,43 +186,42 @@ void RK2(const vector<TYPE> &M, vector<TYPE> &R, const vector<TYPE> &V, TYPE tau
     cudaEventDestroy(finish);
 
 
-    if (doOutput) {
-        for (int i = 0; i < N; ++i) {
+    if (f2)
+        for (int i = 0; i < N; ++i)
             F[i].close();
-        }
-    }
 
-    cudaFree(cudaWeight);
-    cudaFree(cudaPosition);
-    cudaFree(cudaVelocity);
-    cudaFree(cudaKVelocity1);
-    cudaFree(cudaKVelocity2);
+    cudaFree(dev_M);
+    cudaFree(dev_R);
+    cudaFree(dev_V);
+    cudaFree(dev_KV1);
+    cudaFree(dev_KV2);
     cudaFree(dev_KA1);
     cudaFree(dev_KA2);
-    cudaFree(cudaTempPosition);
-    cudaFree(cudaTempVelocity);
+    cudaFree(dev_tempR);
+    cudaFree(dev_tempV);
 
-    printf("Time = %f\n", dt / (timeSteps * 1000.0));
+    printf("Time = %f\n", dt / (timesteps * 1000.0));
+    printf("ALlTime = %f\n", dt / 1000.0);
 }
 
-int main() {
+
+int main(int argc, char **argv) {
     int N;
     TYPE T;
-    TYPE countStep = 10.0;
-    const int num = 4;
-    TYPE tau = num * 1e-3; // step
-    vector<TYPE> weight;
-    vector<TYPE> position;
-    vector<TYPE> velocity;
-    readFromFile(weight, position, velocity, N);
+    TYPE countstep = 600.0;
+    int num = 4;
+    TYPE tau = num * 1e-3;
+    vector<TYPE> r, m, v;
+    readFromFile(m, r, v, N);
 
-    if (is4BodyInput) {
+    if (f1) {
         T = 20.0;
     } else {
-        T = countStep * tau;
+        T = countstep * tau;
     }
 
-    RK2(weight, position, velocity, tau, T, N, num);
+    RK2(m, r, v, tau, T, N, num);
+
 
     return 0;
 }
