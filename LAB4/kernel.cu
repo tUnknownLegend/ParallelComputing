@@ -45,7 +45,7 @@ void readFromFile(vector<TYPE> &M, vector<TYPE> &R, vector<TYPE> &V, int &N) {
 
 __global__ void
 acceleration(TYPE *dev_M, TYPE *dev_R, TYPE *dev_V, TYPE *dev_KV, TYPE *dev_KA, int N, int tau, TYPE *dev_tempR,
-             YPE *dev_tempV) {
+             TYPE *dev_tempV) {
     int globIdx = threadIdx.x + blockDim.x * blockIdx.x;
     int locIdx = threadIdx.x;
     int globIdx3 = 3 * globIdx;
